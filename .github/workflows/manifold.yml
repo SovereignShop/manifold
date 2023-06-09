@@ -229,10 +229,8 @@ jobs:
       run: |
         echo "List DLL dependencies"
         $currentDir = Get-Location
-        $binPath = Join-Path -Path $currentDir -ChildPath "build"
+        $binPath = Join-Path -Path $currentDir -ChildPath "build\src\third_party\clipper\CPP\Release"
         Add-Content $env:GITHUB_PATH $binPath
-        dumpbin /DEPENDENTS build/Clipper2.dll
-
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
