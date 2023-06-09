@@ -49,7 +49,13 @@
                 <includes>
                     <include>libmeshIO.so</include>
                     <include>libmeshIO.dylib</include>
-                    <include>Release/meshIO.dll</include>
+                    <include>meshIO.dll</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>../../build/meshIO/Release</directory>
+                <includes>
+                    <include>meshIO.dll</include>
                 </includes>
             </resource>
             <resource>
@@ -57,7 +63,12 @@
                 <includes>
                     <include>libmanifold.so</include>
                     <include>libmanifold.dylib</include>
-                    <include>Release/manifold.dll</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>../../build/src/manifold/Release</directory>
+                <includes>
+                    <include>manifold.dll</include>
                 </includes>
             </resource>
             <resource>
@@ -65,6 +76,12 @@
                 <includes>
                     <include>libClipper2.so.1.2.1</include>
                     <include>libClipper2.1.2.1.dylib</include>
+                    <include>Release/Clipper2.dll</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>../../build/src/third_party/clipper2/CPP/Rlease</directory>
+                <includes>
                     <include>Release/Clipper2.dll</include>
                 </includes>
             </resource>
