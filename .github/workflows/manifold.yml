@@ -63,7 +63,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
-        cd build/test
+        cd build/bin
         ./manifold_test
         cd ../../
         python3 bindings/python/examples/run_all.py
@@ -77,7 +77,7 @@ jobs:
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
         lcov --capture --initial --directory . --output-file ./code_coverage_init.info
-        cd test
+        cd bin
         ./manifold_test
         cd ../
         lcov --capture --directory . --output-file ./code_coverage_test.info
@@ -224,19 +224,13 @@ jobs:
         cmake . -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
         cd build
         cmake --build . --target ALL_BUILD --config Release
-    - name: Check files
-      run: |
-        ls build/meshIO/Release
-        ls build/bin
     - name: List DLL dependencies
       shell: powershell
       run: |
         echo "List DLL dependencies"
         $currentDir = Get-Location
-        $binPath = Join-Path -Path $currentDir -ChildPath "build"
+        $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
         Add-Content $env:GITHUB_PATH $binPath
-        dumpbin /DEPENDENTS build/bin/Clipper2.dll
-
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
@@ -252,62 +246,62 @@ jobs:
         name: java_artifacts_${{matrix.parallel_backend}}_${{matrix.cuda_support}}
         path: bindings/java/target/*.jar
 
-  #build_mac:
-  #  timeout-minutes: 30
-  #  strategy:
-  #    matrix:
-  #      parallel_backend: [NONE, TBB]
-  #  runs-on: macos-latest
-  #  if: github.event.pull_request.draft == false
-  #  steps:
-  #  - name: Install common dependencies
-  #    run: |
-  #      brew install pkg-config assimp
-  #      pip install trimesh
-  #  - name: Install OpenMP
-  #    if: matrix.parallel_backend == 'OMP'
-  #    run: brew install libomp
-  #  - name: Install TBB
-  #    if: matrix.parallel_backend == 'TBB'
-  #    run: brew install tbb
-  #  - name: Install Java and Maven
-  #    run: |
-  #      brew install openjdk@11
-  #      brew install maven
-  #      echo "JAVA_HOME=$(/usr/libexec/java_home -v 11)" >> $GITHUB_ENV
-  #  - name: Check Java version
-  #    run: java -version
-  #  - uses: actions/checkout@v3
-  #    with:
-  #      submodules: recursive
-  #  - uses: jwlawson/actions-setup-cmake@v1.12
-  #  - name: Build
-  #    run: |
-  #      mkdir build
-  #      cd build
-  #      cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
-  #  - name: Check files
-  #    run: |
-  #      ls build/meshIO/;
-  #      if [[ -f build/meshIO/libmeshIO.dylib ]]; then
-  #        echo "Files exist."
-  #      else
-  #        echo "One or more required files do not exist."
-  #        exit 1
-  #      fi
-  #  - name: Build Java package
-  #    run: |
-  #      cd bindings/java
-  #      mvn package
-  #  - name: Test
-  #    run: |
-  #      cd build/test
-  #      ./manifold_test
-  #  - name: Upload artifact
-  #    uses: actions/upload-artifact@v3
-  #    with:
-  #      name: java-package-mac
-  #      path: bindings/java/target/*.jar
+  build_mac:
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        parallel_backend: [NONE, TBB]
+    runs-on: macos-latest
+    if: github.event.pull_request.draft == false
+    steps:
+    - name: Install common dependencies
+      run: |
+        brew install pkg-config assimp
+        pip install trimesh
+    - name: Install OpenMP
+      if: matrix.parallel_backend == 'OMP'
+      run: brew install libomp
+    - name: Install TBB
+      if: matrix.parallel_backend == 'TBB'
+      run: brew install tbb
+    - name: Install Java and Maven
+      run: |
+        brew install openjdk@11
+        brew install maven
+        echo "JAVA_HOME=$(/usr/libexec/java_home -v 11)" >> $GITHUB_ENV
+    - name: Check Java version
+      run: java -version
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: jwlawson/actions-setup-cmake@v1.12
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
+    - name: Check files
+      run: |
+        ls build/meshIO/;
+        if [[ -f build/meshIO/libmeshIO.dylib ]]; then
+          echo "Files exist."
+        else
+          echo "One or more required files do not exist."
+          exit 1
+        fi
+    - name: Build Java package
+      run: |
+        cd bindings/java
+        mvn package
+    - name: Test
+      run: |
+        cd build/bin
+        ./manifold_test
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: java-package-mac
+        path: bindings/java/target/*.jar
 
   #build_nix:
   #  timeout-minutes: 30
