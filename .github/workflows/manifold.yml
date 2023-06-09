@@ -224,10 +224,6 @@ jobs:
         cmake . -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
         cd build
         cmake --build . --target ALL_BUILD --config Release
-    - name: Check files
-      run: |
-        ls build/meshIO/Release
-        ls build/bin
     - name: List DLL dependencies
       shell: powershell
       run: |
@@ -235,7 +231,7 @@ jobs:
         $currentDir = Get-Location
         $binPath = Join-Path -Path $currentDir -ChildPath "build"
         Add-Content $env:GITHUB_PATH $binPath
-        dumpbin /DEPENDENTS build/bin/Clipper2.dll
+        dumpbin /DEPENDENTS build/Clipper2.dll
 
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
