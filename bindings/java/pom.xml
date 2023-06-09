@@ -37,7 +37,7 @@
     <build>
         <resources>
           <resource>
-                <directory>../../build/bin</directory>
+                <directory>../../build</directory>
                 <includes>
                     <include>meshIO.dll</include>
                     <include>manifold.dll</include>
