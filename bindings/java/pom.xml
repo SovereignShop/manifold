@@ -84,6 +84,12 @@
                     <include>Clipper2.dll</include>
                 </includes>
             </resource>
+            <resource>
+                <directory>../../build/src/third_party/glm/glm/Release</directory>
+                <includes>
+                    <include>glm_shared.dll</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
            <plugin>
