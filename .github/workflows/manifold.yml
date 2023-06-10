@@ -230,6 +230,7 @@ jobs:
         echo "List DLL dependencies"
         $currentDir = Get-Location
         $binPath = Join-Path -Path $currentDir -ChildPath "build/src/third_party/clipper2/CPP/Release"
+        $binPath = Join-Path -Path $currentDir -ChildPath "build/src/third_party/glm/glm/Release"
         $binPath = Join-Path -Path $currentDir -ChildPath "build/meshIO/Release"
         $binPath = Join-Path -Path $currentDir -ChildPath "build/src/manifold/Release"
         Add-Content $env:GITHUB_PATH $binPath
