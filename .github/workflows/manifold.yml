@@ -120,7 +120,7 @@ jobs:
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
       run: |
-        cd build/test
+        cd build/bin
         ./manifold_test --gtest_filter=CBIND.*
 
   build_wasm:
@@ -151,7 +151,7 @@ jobs:
         emcmake cmake -DCMAKE_BUILD_TYPE=Release .. && emmake make
     - name: Test WASM
       run: |
-        cd build/test
+        cd build/bin
         node ./manifold_test.js
     - name: Test examples
       run: |
@@ -234,7 +234,7 @@ jobs:
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
-    #    cd build/test
+    #    cd build/bin
     #    ./Release/manifold_test.exe
     - name: Build Java bindings
       run: |
