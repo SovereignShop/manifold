@@ -51,7 +51,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
     - name: Build Java package
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
@@ -63,7 +63,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
-        cd build/test
+        cd build/bin
         ./manifold_test
         cd ../../
         python3 bindings/python/examples/run_all.py
@@ -75,9 +75,9 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
         lcov --capture --initial --directory . --output-file ./code_coverage_init.info
-        cd test
+        cd bin
         ./manifold_test
         cd ../
         lcov --capture --directory . --output-file ./code_coverage_test.info
@@ -206,7 +206,6 @@ jobs:
         ls $env:CUDA_PATH\include
     - name: Install Assimp from source
       shell: bash
-
       run: |
         git clone https://github.com/assimp/assimp.git
         cd assimp
@@ -222,13 +221,9 @@ jobs:
     - name: Build ${{matrix.backend}}
       shell: powershell
       run: |
-        cmake . -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
+        cmake . -DOUTPUT_TO_BIN=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
         cd build
         cmake --build . --target ALL_BUILD --config Release
-    - name: Check files
-      run: |
-        ls build/meshIO/Release
-        ls build/bin
     - name: List DLL dependencies
       shell: powershell
       run: |
@@ -236,12 +231,10 @@ jobs:
         $currentDir = Get-Location
         $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
         Add-Content $env:GITHUB_PATH $binPath
-        dumpbin /DEPENDENTS build/bin/Clipper2.dll
-
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
-    #    cd build/test
+    #    cd build/bin
     #    ./Release/manifold_test.exe
     - name: Build Java bindings
       run: |
@@ -286,7 +279,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
     - name: Check files
       run: |
         ls build/meshIO/;
@@ -302,7 +295,7 @@ jobs:
         mvn package
     - name: Test
       run: |
-        cd build/test
+        cd build/bin
         ./manifold_test
     - name: Upload artifact
       uses: actions/upload-artifact@v3
