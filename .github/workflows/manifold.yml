@@ -75,7 +75,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
         lcov --capture --initial --directory . --output-file ./code_coverage_init.info
         cd bin
         ./manifold_test
