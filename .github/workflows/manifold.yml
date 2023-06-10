@@ -120,7 +120,7 @@ jobs:
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
       run: |
-        cd build/bin
+        cd build/test
         ./manifold_test --gtest_filter=CBIND.*
 
   build_wasm:
@@ -148,10 +148,10 @@ jobs:
         source ./emsdk/emsdk_env.sh
         mkdir build
         cd build
-        emcmake cmake -DOUTPUT_TO_BIN=OFF -DCMAKE_BUILD_TYPE=Release .. && emmake make
+        emcmake cmake -DCMAKE_BUILD_TYPE=Release .. && emmake make
     - name: Test WASM
       run: |
-        cd build/bin
+        cd build/test
         node ./manifold_test.js
     - name: Test examples
       run: |
