@@ -76,13 +76,12 @@
                 <includes>
                     <include>libClipper2.so.1.2.1</include>
                     <include>libClipper2.1.2.1.dylib</include>
-                    <include>Release/Clipper2.dll</include>
                 </includes>
             </resource>
             <resource>
-                <directory>../../build/src/third_party/clipper2/CPP/Rlease</directory>
+                <directory>../../build/src/third_party/clipper2/CPP/Release</directory>
                 <includes>
-                    <include>Release/Clipper2.dll</include>
+                    <include>Clipper2.dll</include>
                 </includes>
             </resource>
         </resources>
