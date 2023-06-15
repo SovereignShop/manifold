@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.clojars.cartesiantheatrics</groupId>
     <artifactId>manifold3d</artifactId>
-    <version>1.0.7</version>
+    <version>1.0.8</version>
     <packaging>jar</packaging>
     
     <properties>
@@ -45,6 +45,12 @@
                     <include>libmeshIO.so</include>
                     <include>libmeshIO.dylib</include>
                     <include>meshIO.dll</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/third_party/qhull/lib</directory>
+                <includes>
+                    <include>libqhull_r.so.8.1-alpha3</include>
                 </includes>
             </resource>
             <resource>
@@ -97,6 +103,7 @@
                     <includePaths>
                         <includePath>${project.build.sourceDirectory}</includePath>
                         <includePath>src/main/cpp/manifold3d/</includePath>
+                        <includePath>src/third_party/qhull/src/</includePath>
                         <includePath>../../src/cross_section/include/</includePath>
                         <includePath>../../src/third_party/clipper2/CPP/Clipper2Lib/include/</includePath>
                         <includePath>../../src/third_party/glm/</includePath>

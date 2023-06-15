@@ -100,6 +100,8 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
 
         if (i == 0) {
             nVerticesInEachSection = vertPos.size();
+        } else if ((vertPos.size() % nVerticesInEachSection) != 0)  {
+            throw std::runtime_error("Recieved CrossSection with different number of vertices");
         }
 
         if (i < sections.size() - 1) {
