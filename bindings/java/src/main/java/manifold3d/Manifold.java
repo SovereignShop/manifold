@@ -34,7 +34,9 @@ import manifold3d.glm.DoubleVec3;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = {"manifold"})
+@Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"},
+          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS, LibraryPaths.QHULL },
+          link = {"manifold", "qhull_r"})
 @Namespace("manifold")
 public class Manifold extends Pointer {
     static {
@@ -42,6 +44,7 @@ public class Manifold extends Pointer {
         String osName = System.getProperty("os.name").toLowerCase();
         if (osName.contains("linux")) {
             try {
+                System.load(Loader.extractResource("/libqhull_r.so.8.1-alpha3", null, "libqhull_r", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmeshIO.so", null, "libmeshIO", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libClipper2.so.1.2.1", null, "libClipper2", ".so").getAbsolutePath());
