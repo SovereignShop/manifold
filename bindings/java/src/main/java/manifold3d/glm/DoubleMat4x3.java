@@ -25,7 +25,7 @@ public class DoubleMat4x3 extends DoublePointer implements Iterable<DoubleVec3> 
 
             @Override
             public boolean hasNext() {
-                return index < 3;
+                return index < 4;
             }
 
             @Override
