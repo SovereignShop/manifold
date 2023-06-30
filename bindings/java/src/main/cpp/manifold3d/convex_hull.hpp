@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include <quickhull.hpp>
+#include <QuickHullTomilov.hpp>
 #include <QuickHull.hpp>
 #include <stdexcept>
 #include <array>
@@ -503,11 +503,10 @@ void QuickHull<T>::setupInitialTetrahedron() {
  * Explicit template specifications for float and double
  */
 
-
-
 template class QuickHull<float>;
-template<>
-const float QuickHull<float>::Epsilon = 0.0001f;
+template class QuickHull<double>;
+template<> const float QuickHull<float>::Epsilon = 0.0001f;
+template<> const double QuickHull<double>::Epsilon = 0.00001f;
 
 }
 
@@ -578,7 +577,7 @@ void QuickHull3D(const std::vector<glm::vec3>& inputVerts, std::vector<glm::ivec
     }
 
     const float eps = 0.0;
-    QuickHull::quick_hull<typename Points::const_iterator> quickhull{dim, eps};
+    QuickHullTomilov::quick_hull<typename Points::const_iterator> quickhull{dim, eps};
     quickhull.add_points(std::cbegin(points), std::cend(points));
     auto initial_simplex = quickhull.get_affine_basis();
     if (initial_simplex.size() < dim + 1) {
@@ -665,7 +664,7 @@ manifold::SimplePolygon QuickHull2D(const manifold::SimplePolygon& inputVerts, c
         points[i] = {pt.x, pt.y};
     }
 
-    QuickHull::quick_hull<typename Points::const_iterator> quickhull{dim, precision};
+    QuickHullTomilov::quick_hull<typename Points::const_iterator> quickhull{dim, precision};
     quickhull.add_points(std::cbegin(points), std::cend(points));
     auto initial_simplex = quickhull.get_affine_basis();
 
