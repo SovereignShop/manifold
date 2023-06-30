@@ -64,7 +64,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         cd bindings/java
-        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=mac
+        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=linux
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -255,7 +255,7 @@ jobs:
     - name: Build Java bindings
       run: |
         cd bindings/java
-        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=mac
+        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=win
     - name: Upload Java artifacts
       uses: actions/upload-artifact@v2
       with:
