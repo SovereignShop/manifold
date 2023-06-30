@@ -18,7 +18,7 @@ public class ManifoldTest {
         DoubleMesh mesh = new DoubleMesh();
         Manifold manifold = new Manifold(mesh);
 
-        Manifold sphere = Manifold.Sphere(10.0f, 140);
+        Manifold sphere = Manifold.Sphere(10.0f, 20);
         Manifold cube = Manifold.Cube(new DoubleVec3(15.0f, 15.0f, 15.0f), false);
         Manifold cylinder = Manifold.Cylinder(3, 30.0f, 30.0f, 0, false).translateX(20).translateY(20).translateZ(-3.0);
 
@@ -42,12 +42,12 @@ public class ManifoldTest {
         //Assert.assertEquals(hull.status(), 0);
         //Assert.assertNotEquals(hull.getProperties().volume(), 0.0, 0.001);
 
+        MeshIO.ExportMesh("hull.glb", hullMesh, opts);
         System.out.println("volume: " + hull.getProperties().volume());
         System.out.println("Status: " + hull.status());
         System.out.flush();
         assert hull.getProperties().volume() > 0.0;
 
         DoubleVec3Vector vertPos = hullMesh.vertPos();
-        //MeshIO.ExportMesh("HullCubes.stl", hullMesh, opts);
     }
 }
