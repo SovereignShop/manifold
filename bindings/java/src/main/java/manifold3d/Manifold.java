@@ -22,7 +22,6 @@ import manifold3d.pub.DoubleMesh;
 import manifold3d.ConvexHull;
 import manifold3d.pub.Box;
 import manifold3d.pub.Properties;
-import manifold3d.pub.Curvature;
 import manifold3d.pub.SmoothnessVector;
 import manifold3d.pub.OpType;
 
@@ -110,7 +109,7 @@ public class Manifold extends Pointer {
     @Name("Precision") public native float precision();
     @Name("Genus") public native int genus();
     @Name("GetProperties")  public native @ByVal Properties getProperties();
-    @Name("GetCurvature") public native @ByVal Curvature getCurvature();
+    @Name("CalculateCurvature") public native @ByVal Manifold calculateCurvature(int gaussianIdx, int meanIdx);
     @Name("OriginalID") public native int originalID();
     @Name("AsOriginal") public native @ByVal Manifold asOriginal();
 
