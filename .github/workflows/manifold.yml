@@ -52,11 +52,19 @@ jobs:
         mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
+    - name: Get version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
+      shell: bash
     - name: Build Java package
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         cd bindings/java
-        mvn package
+        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=mac
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -236,14 +244,22 @@ jobs:
     #  run: |
     #    cd build/bin
     #    ./Release/manifold_test.exe
+    - name: Get version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
+      shell: bash
     - name: Build Java bindings
       run: |
         cd bindings/java
-        mvn package
+        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=mac
     - name: Upload Java artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: java_artifacts_${{matrix.parallel_backend}}_${{matrix.cuda_support}}
+        name: manifold_java_bindings_windows
         path: bindings/java/target/*.jar
 
   build_mac:
@@ -289,10 +305,26 @@ jobs:
           echo "One or more required files do not exist."
           exit 1
         fi
+    - name: Get version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
+      shell: bash
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn package
+        mvn package -Drevision=${{ steps.get_version.outputs.VERSION }} -Dplatform=mac
+    - name: Deploy Java Package
+      if: steps.check_version.outputs.changed == 'true'
+      run: |
+        cd bindings/java
+        mvn deploy:deploy-file -Dfile=target/manifold3d-mac-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d-mac -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true --settings settings.xml
+      env:
+        CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: Test
       run: |
         cd build/bin
@@ -300,7 +332,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: java-package-mac
+        name: manifold_java_bindings_mac
         path: bindings/java/target/*.jar
 
   build_nix:
