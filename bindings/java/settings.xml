@@ -2,7 +2,7 @@
   <servers>
     <server>
       <id>clojars</id>
-      <username>${env.CLOJARS_USERNAME}</username>
+      <username>cartesiantheatrics</username>
       <password>${env.CLOJARS_TOKEN}</password>
     </server>
   </servers>
