@@ -21,4 +21,5 @@ public class MatrixTransforms extends Pointer {
 
     public static native @ByVal DoubleMat4x3 Transform(@ByRef DoubleMat4x3 mat1, @ByRef DoubleMat4x3 mat2);
     public static native @ByVal DoubleMat4x3 InvertTransform(@ByRef DoubleMat4x3 mat);
+    public static native @ByVal DoubleMat4x3 CombineTransforms(@ByRef DoubleMat4x3 a, @ByRef DoubleMat4x3 b);
 }

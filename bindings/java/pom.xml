@@ -48,12 +48,6 @@
                 </includes>
             </resource>
             <resource>
-                <directory>src/third_party/qhull/lib</directory>
-                <includes>
-                    <include>libqhull_r.so.8.1-alpha3</include>
-                </includes>
-            </resource>
-            <resource>
                 <directory>../../build/meshIO/Release</directory>
                 <includes>
                     <include>meshIO.dll</include>
@@ -103,7 +97,6 @@
                     <includePaths>
                         <includePath>${project.build.sourceDirectory}</includePath>
                         <includePath>src/main/cpp/manifold3d/</includePath>
-                        <includePath>src/third_party/qhull/src/</includePath>
                         <includePath>../../src/cross_section/include/</includePath>
                         <includePath>../../src/third_party/clipper2/CPP/Clipper2Lib/include/</includePath>
                         <includePath>../../src/third_party/glm/</includePath>

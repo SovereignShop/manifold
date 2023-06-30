@@ -15,7 +15,7 @@ import manifold3d.Manifold;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 
-@Platform(compiler = "cpp17", include = {"convex_hull.hpp"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS, LibraryPaths.QHULL}, link = {"manifold", "qhull_r"})
+@Platform(compiler = "cpp17", include = {"convex_hull.hpp"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS, LibraryPaths.QHULL}, link = {"manifold"})
 public class ConvexHull extends Pointer {
     static { Loader.load(); }
 
