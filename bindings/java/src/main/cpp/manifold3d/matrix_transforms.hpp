@@ -131,4 +131,18 @@ glm::mat4x3 InvertTransform(const glm::mat4x3& m) {
   return result;
 }
 
+glm::mat4x3 CombineTransforms(const glm::mat4x3& a, const glm::mat4x3& b) {
+    glm::mat4x3 result;
+
+    // Apply rotation of 'a' to 'b' and normalize
+    for (int i = 0; i < 3; ++i) {
+        result[i] = glm::normalize(a[0]*b[i][0] + a[1]*b[i][1] + a[2]*b[i][2]);
+    }
+
+    // Apply translation of 'a' to 'b'
+    result[3] = a[0]*b[3][0] + a[1]*b[3][1] + a[2]*b[3][2] + a[3];
+
+    return result;
+}
+
 }
