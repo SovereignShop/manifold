@@ -18,21 +18,6 @@
 #include "manifold.h"
 #include "cross_section.h"
 
-/*
- * QuickHull.hpp
- *
- *  QuickHull implementation from https://github.com/akuukka/quickhull by Antti
- *  Kuukka
- *
- *  Per the README.md file:
- *
- *  This implementation is 100% Public Domain.
- *
- *  Feel free to use.
- *
- *  C++11 is needed to compile it.
- */
-
 #include "common.h"
 #include <cmath>
 #include <cassert>
@@ -41,11 +26,9 @@
 
 namespace quickhull {
 
-template<>
-const float QuickHull<float>::Epsilon = 0.0001f;
+//template<>
+//const double QuickHull<double>::Epsilon = 0.0000001;
 
-template<>
-const double QuickHull<double>::Epsilon = 0.0000001;
 
 /*
  * Implementation of the algorithm
@@ -520,8 +503,12 @@ void QuickHull<T>::setupInitialTetrahedron() {
  * Explicit template specifications for float and double
  */
 
+
+
 template class QuickHull<float>;
-template class QuickHull<double>;
+template<>
+const float QuickHull<float>::Epsilon = 0.0001f;
+
 }
 
 // Local Variables:
