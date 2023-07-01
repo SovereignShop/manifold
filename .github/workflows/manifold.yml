@@ -314,7 +314,7 @@ jobs:
     - name: Check if version has changed
       id: check_version
       run: |
-        if git diff --quiet HEAD~2..HEAD -- bindings/java/version.txt
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
         then
           echo "changed=false" >> $GITHUB_ENV
         else
