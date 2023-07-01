@@ -58,14 +58,35 @@ jobs:
       shell: bash
     - name: Check if version has changed
       id: check_version
-      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
-      shell: bash
+      run: |
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
+        then
+          echo "changed=false" >> $GITHUB_ENV
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
     - name: Build Java package
-      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package
+        mvn package -Dclassifier=linux
+    - name: Deploy Java Package
+      if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.parallel_backend != 'NONE' && matrix.cuda_support != 'OFF'
+      run: |
+        cd bindings/java
+        mvn deploy:deploy-file \
+          -Dfile=target/manifold3d-${{env.VERSION}}.jar \
+          -DrepositoryId=clojars \
+          -Durl=https://clojars.org/repo \
+          -DgroupId=org.clojars.cartesiantheatrics \
+          -DartifactId=manifold3d \
+          -Dversion=${{env.VERSION}} \
+          -Dclassifier=linux \
+          -Dpackaging=jar \
+          --settings settings.xml
+      env:
+        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
+        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -233,6 +254,41 @@ jobs:
         cmake . -DOUTPUT_TO_BIN=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
         cd build
         cmake --build . --target ALL_BUILD --config Release
+    - name: Get version
+      id: get_version
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: |
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
+        then
+          echo "changed=false" >> $GITHUB_ENV
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
+    - name: Build Java package
+      run: |
+        cd bindings/java
+        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
+        mvn package -Dclassifier=windows
+    - name: Deploy Java Package
+      if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
+      run: |
+        cd bindings/java
+        mvn deploy:deploy-file \
+          -Dfile=target/manifold3d-${{env.VERSION}}.jar \
+          -DrepositoryId=clojars \
+          -Durl=https://clojars.org/repo \
+          -DgroupId=org.clojars.cartesiantheatrics \
+          -DartifactId=manifold3d \
+          -Dversion=${{env.VERSION}} \
+          -Dclassifier=windows \
+          -Dpackaging=jar \
+          --settings settings.xml
+      env:
+        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
+        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: List DLL dependencies
       shell: powershell
       run: |
@@ -245,19 +301,6 @@ jobs:
     #  run: |
     #    cd build/bin
     #    ./Release/manifold_test.exe
-    - name: Get version
-      id: get_version
-      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
-      shell: bash
-    - name: Check if version has changed
-      id: check_version
-      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
-      shell: bash
-    - name: Build Java bindings
-      run: |
-        cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package
     - name: Upload Java artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -326,7 +369,7 @@ jobs:
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dclassifier=mac
     - name: Deploy Java Package
-      if: env.changed == 'true'
+      if: env.changed == 'true' && matrix.parallel_backend == 'NONE'
       run: |
         cd bindings/java
         mvn deploy:deploy-file \
