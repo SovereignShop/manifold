@@ -318,7 +318,7 @@ jobs:
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt) fr --file pom.xml
+        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package
     - name: Deploy Java Package
       if: steps.check_version.outputs.changed == 'true'
