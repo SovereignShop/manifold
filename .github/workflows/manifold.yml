@@ -81,7 +81,7 @@ jobs:
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
           -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
+          -Dversion=${{env.VERSION}}-linux \
           -Dpackaging=jar \
           --settings settings.xml
       env:
