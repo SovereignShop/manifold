@@ -70,7 +70,7 @@ jobs:
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dclassifier=linux
+        mvn package
     - name: Deploy Java Package
       if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
       run: |
@@ -80,9 +80,8 @@ jobs:
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
-          -DartifactId=manifold3d \
+          -DartifactId=manifold3d-linux \
           -Dversion=${{env.VERSION}} \
-          -Dclassifier=linux \
           -Dpackaging=jar \
           --settings settings.xml
       env:
@@ -273,7 +272,7 @@ jobs:
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dclassifier=windows
+        mvn package
     - name: Deploy Java Package
       if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
       run: |
@@ -283,9 +282,8 @@ jobs:
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
-          -DartifactId=manifold3d \
+          -DartifactId=manifold3d-win \
           -Dversion=${{env.VERSION}} \
-          -Dclassifier=windows \
           -Dpackaging=jar \
           --settings settings.xml
       env:
@@ -369,7 +367,7 @@ jobs:
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dclassifier=mac
+        mvn package
     - name: Deploy Java Package
       if: env.changed == 'true' && matrix.parallel_backend == 'NONE'
       run: |
@@ -379,9 +377,8 @@ jobs:
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
-          -DartifactId=manifold3d \
+          -DartifactId=manifold3d-mac \
           -Dversion=${{env.VERSION}} \
-          -Dclassifier=mac \
           -Dpackaging=jar \
           --settings settings.xml
       env:
