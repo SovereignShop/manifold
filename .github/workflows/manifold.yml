@@ -283,7 +283,7 @@ jobs:
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
           -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
+          -Dversion=${{env.VERSION}}-win \
           -Dpackaging=jar \
           --settings settings.xml
       env:
@@ -378,7 +378,7 @@ jobs:
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
           -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
+          -Dversion=${{env.VERSION}}-mac \
           -Dpackaging=jar \
           --settings settings.xml
       env:
