@@ -271,9 +271,8 @@ jobs:
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt)-win --file pom.xml
+        mvn versions:set -DnewVersion="$(cat version.txt)-win" --file pom.xml
         mvn package
-      shell: bash
     - name: Deploy Java Package
       if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
       run: |
