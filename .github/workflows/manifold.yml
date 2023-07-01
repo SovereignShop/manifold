@@ -30,6 +30,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
+        fetch-depth: 2
     - uses: jwlawson/actions-setup-cmake@v1.12
     - name: Setup Java
       uses: actions/setup-java@v2
@@ -52,6 +53,13 @@ jobs:
         mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
+    - name: List DLL dependencies
+      shell: powershell
+      run: |
+        echo "List DLL dependencies"
+        $currentDir = Get-Location
+        $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
+        Add-Content $env:GITHUB_PATH $binPath
     - name: Get version
       id: get_version
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
@@ -209,6 +217,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
+        fetch-depth: 2
     - uses: jwlawson/actions-setup-cmake@v1.12
     - uses: ilammy/msvc-dev-cmd@v1
     - uses: actions/setup-java@v2
@@ -335,6 +344,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
+        fetch-depth: 2
     - uses: jwlawson/actions-setup-cmake@v1.12
     - name: Build
       run: |
