@@ -230,8 +230,6 @@ jobs:
       if: matrix.backend == 'CUDA'
       env:
         cuda: "11.3.0"
-        visual_studio: "Visual Studio 16 2019"
-      shell: powershell
       run: |
         Invoke-RestMethod https://raw.githubusercontent.com/ptheywood/cuda-cmake-github-actions/21811d232fc775fa8d44dddf7f8c5ce2cf8d2b81/scripts/actions/install_cuda_windows.ps1 -OutFile install_cuda_windows.ps1
         .\install_cuda_windows.ps1
@@ -263,6 +261,13 @@ jobs:
         cmake . -DOUTPUT_TO_BIN=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
         cd build
         cmake --build . --target ALL_BUILD --config Release
+    - name: List DLL dependencies
+      shell: powershell
+      run: |
+        echo "List DLL dependencies"
+        $currentDir = Get-Location
+        $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
+        Add-Content $env:GITHUB_PATH $binPath
     - name: Get version
       id: get_version
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
@@ -298,13 +303,6 @@ jobs:
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
-    - name: List DLL dependencies
-      shell: powershell
-      run: |
-        echo "List DLL dependencies"
-        $currentDir = Get-Location
-        $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
-        Add-Content $env:GITHUB_PATH $binPath
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
