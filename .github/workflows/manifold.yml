@@ -335,7 +335,7 @@ jobs:
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
           -DartifactId=manifold3d \
-          -Dversion=1.0.19 \
+          -Dversion=${{env.VERSION}} \
           -Dclassifier=mac \
           -Dpackaging=jar \
           --settings settings.xml
