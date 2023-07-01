@@ -326,7 +326,7 @@ jobs:
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dclassifier=mac
     - name: Deploy Java Package
-      if: env.changed == 'true'
+      if: env.changed == true
       run: |
         cd bindings/java
         mvn deploy:deploy-file \
