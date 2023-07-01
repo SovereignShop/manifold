@@ -326,6 +326,7 @@ jobs:
         cd bindings/java
         mvn deploy:deploy-file -Dfile=target/manifold3d-mac-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d-mac -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true --settings settings.xml
       env:
+        CLOJARS_PASSPHRASE: ${{ secretes.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: Test
       run: |
