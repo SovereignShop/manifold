@@ -54,7 +54,7 @@ jobs:
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
     - name: Get version
       id: get_version
-      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
       shell: bash
     - name: Check if version has changed
       id: check_version
