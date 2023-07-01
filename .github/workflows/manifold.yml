@@ -66,13 +66,13 @@ jobs:
           echo "changed=true" >> $GITHUB_ENV
         fi
     - name: Build Java package
-      if: env.changed == 'true' && (matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF')
+      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dclassifier=linux
     - name: Deploy Java Package
-      if: env.changed == 'true' && (matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF')
+      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
       run: |
         cd bindings/java
         mvn deploy:deploy-file \
