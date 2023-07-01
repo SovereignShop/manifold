@@ -65,7 +65,7 @@ jobs:
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Plinux
+        mvn package
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -257,7 +257,7 @@ jobs:
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Pwin
+        mvn package
     - name: Upload Java artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -318,13 +318,13 @@ jobs:
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Pmac
+        mvn versions:set -DnewVersion=$(cat version.txt) fr --file pom.xml
+        mvn package
     - name: Deploy Java Package
       if: steps.check_version.outputs.changed == 'true'
       run: |
         cd bindings/java
-        mvn deploy:deploy-file -Dfile=target/manifold3d-mac-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d-mac -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true --settings settings.xml
+        mvn deploy:deploy-file -Dfile=target/manifold3d-mac-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d-mac -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true -Dclassifier=mac --settings settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
