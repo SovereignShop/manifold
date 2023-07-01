@@ -338,6 +338,7 @@ jobs:
           -Dversion=1.0.19 \
           -Dclassifier=mac \
           -Dpackaging=jar
+          --settings settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
