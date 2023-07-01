@@ -324,7 +324,7 @@ jobs:
       if: steps.check_version.outputs.changed == 'true'
       run: |
         cd bindings/java
-        mvn deploy:deploy-file -Dfile=target/manifold3d-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d-mac -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true -Dclassifier=mac --settings settings.xml
+        mvn deploy:deploy-file -Dfile=target/manifold3d-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true -Dclassifier=mac --settings settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
