@@ -309,22 +309,27 @@ jobs:
         fi
     - name: Get version
       id: get_version
-      run: echo "::set-output name=VERSION::$(cat bindings/java/version.txt)"
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
       shell: bash
     - name: Check if version has changed
       id: check_version
-      run: echo "::set-output name=changed::$(if git diff --quiet HEAD~1..HEAD -- bindings/java/version.txt; then echo 'false'; else echo 'true'; fi)"
-      shell: bash
+      run: |
+        if git diff --quiet HEAD~2..HEAD -- bindings/java/version.txt
+        then
+          echo "changed=false" >> $GITHUB_ENV
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
     - name: Build Java package
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package
     - name: Deploy Java Package
-      if: steps.check_version.outputs.changed == 'true'
+      if: env.changed == 'true'
       run: |
         cd bindings/java
-        mvn deploy:deploy-file -Dfile=target/manifold3d-${{ steps.get_version.outputs.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d -Dversion=${{ steps.get_version.outputs.VERSION }} -Dpackaging=jar -DgeneratePom=true -Dclassifier=mac --settings settings.xml
+        mvn deploy:deploy-file -Dfile=target/manifold3d-${{ env.VERSION }}.jar -DrepositoryId=clojars -Durl=https://clojars.org/repo -DgroupId=org.clojars.cartesiantheatrics -DartifactId=manifold3d -Dversion=${{ env.VERSION }} -Dpackaging=jar -DgeneratePom=true -Dclassifier=mac --settings settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
         CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
