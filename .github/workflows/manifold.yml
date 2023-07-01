@@ -337,7 +337,7 @@ jobs:
           -DartifactId=manifold3d \
           -Dversion=1.0.19 \
           -Dclassifier=mac \
-          -Dpackaging=jar
+          -Dpackaging=jar \
           --settings settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
