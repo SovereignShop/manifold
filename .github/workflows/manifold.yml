@@ -223,6 +223,7 @@ jobs:
       if: matrix.backend == 'CUDA'
       env:
         cuda: "11.3.0"
+      shell: powershell
       run: |
         Invoke-RestMethod https://raw.githubusercontent.com/ptheywood/cuda-cmake-github-actions/21811d232fc775fa8d44dddf7f8c5ce2cf8d2b81/scripts/actions/install_cuda_windows.ps1 -OutFile install_cuda_windows.ps1
         .\install_cuda_windows.ps1
@@ -281,6 +282,7 @@ jobs:
         mvn versions:set -DnewVersion="$(cat version.txt)-win" --file pom.xml
         mvn package
     - name: Deploy Java Package
+      shell: bash
       if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
       run: |
         cd bindings/java
