@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.clojars.cartesiantheatrics</groupId>
     <artifactId>manifold3d</artifactId>
-    <version>1.0.29-linux</version>
+    <version>1.0.38</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -137,6 +137,15 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <classifier>${os.classifier}</classifier>
+                </configuration>
             </plugin>
         </plugins>
     </build>
