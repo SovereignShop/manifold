@@ -53,43 +53,12 @@ jobs:
         mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
-    - name: Get version
-      id: get_version
-      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
-      shell: bash
-    - name: Check if version has changed
-      id: check_version
-      run: |
-        if git diff --quiet HEAD~1 -- bindings/java/version.txt
-        then
-          echo "changed=false" >> $GITHUB_ENV
-        else
-          echo "changed=true" >> $GITHUB_ENV
-        fi
     - name: Build Java package
       if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dos.classifier=linux-x86_64
-    - name: Deploy Java Package
-      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
-      run: |
-        cd bindings/java
-        mvn deploy:deploy-file \
-          -Dfile=target/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
-          -DpomFile=pom.xml \
-          -DrepositoryId=clojars \
-          -Durl=https://clojars.org/repo \
-          -DgroupId=org.clojars.cartesiantheatrics \
-          -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
-          -Dclassifier=linux-x86_64 \
-          -Dpackaging=jar \
-          --settings settings.xml
-      env:
-        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
-        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -126,7 +95,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       uses: actions/upload-artifact@v3
       with:
-        name: java-package
+        name: manifold_java_bindings_linux
         path: bindings/java/target/*.jar
 
   build_cbind:
@@ -264,42 +233,11 @@ jobs:
         $currentDir = Get-Location
         $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
         Add-Content $env:GITHUB_PATH $binPath
-    - name: Get version
-      id: get_version
-      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
-      shell: bash
-    - name: Check if version has changed
-      id: check_version
-      run: |
-        if git diff --quiet HEAD~1 -- bindings/java/version.txt
-        then
-          echo "changed=false" >> $GITHUB_ENV
-        else
-          echo "changed=true" >> $GITHUB_ENV
-        fi
-      shell: bash
     - name: Build Java package
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion="$(cat version.txt)" --file pom.xml
         mvn package
-    #- name: Deploy Java Package
-    #  shell: bash
-    #  if: env.changed == 'true' && matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
-    #  run: |
-    #    cd bindings/java
-    #    mvn deploy:deploy-file \
-    #      -Dfile=target/manifold3d-${{env.VERSION}}-win.jar \
-    #      -DrepositoryId=clojars \
-    #      -Durl=https://clojars.org/repo \
-    #      -DgroupId=org.clojars.cartesiantheatrics \
-    #      -DartifactId=manifold3d \
-    #      -Dversion=${{env.VERSION}}-win \
-    #      -Dpackaging=jar \
-    #      --settings settings.xml
-    #  env:
-    #    CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
-    #    CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
     #  shell: bash
     #  run: |
@@ -346,51 +284,12 @@ jobs:
         mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
-    - name: Check files
-      run: |
-        ls build/meshIO/;
-        if [[ -f build/meshIO/libmeshIO.dylib ]]; then
-          echo "Files exist."
-        else
-          echo "One or more required files do not exist."
-          exit 1
-        fi
-    - name: Get version
-      id: get_version
-      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
       shell: bash
-    - name: Check if version has changed
-      id: check_version
-      run: |
-        if git diff --quiet HEAD~1 -- bindings/java/version.txt
-        then
-          echo "changed=false" >> $GITHUB_ENV
-        else
-          echo "changed=true" >> $GITHUB_ENV
-        fi
     - name: Build Java package
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dos.classifier=mac-x86_64
-    - name: Deploy Java Package
-      if: env.changed == 'true' && matrix.parallel_backend == 'NONE'
-      run: |
-        cd bindings/java
-        mvn deploy:deploy-file \
-          -Dfile=target/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
-          -DpomFile=pom.xml \
-          -DrepositoryId=clojars \
-          -Durl=https://clojars.org/repo \
-          -DgroupId=org.clojars.cartesiantheatrics \
-          -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
-          -Dclassifier=mac-x86_64 \
-          -Dpackaging=jar \
-          --settings settings.xml
-      env:
-        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
-        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
     - name: Test
       run: |
         cd build/bin
@@ -415,29 +314,61 @@ jobs:
     - uses: cachix/install-nix-action@v15
     - run: nix build -L '.?submodules=1#manifold-${{matrix.variant}}'
 
-
-  deploy:
-    needs: [build_mac, build]
+  deploy_jars:
     runs-on: ubuntu-latest
+    needs: [build, build_mac]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Download manifold3d-linux-x86.jar
-        uses: actions/download-artifact@v2
-        with:
-          name: linux.jar
-      - name: Download mac.jar
-        uses: actions/download-artifact@v2
-        with:
-          name: manifold3d-mac-x86.jar
-      - name: Set up JDK
-        uses: actions/setup-java@v2
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-          server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-          settings-path: ${{ github.workspace }} # location for the settings.xml file
-      - name: Deploy to GitHub Packages
-        run: mvn deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+        fetch-depth: 2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    - name: Install Maven
+      run: |
+        apt-get update
+        apt-get install -y maven
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_mac
+        path: mac-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_linux
+        path: linux-jar
+    - name: Get version
+      id: get_version
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: |
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
+        then
+          echo "changed=false" >> $GITHUB_ENV
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
+    - name: Deploy Jars
+      if: env.changed == 'true'
+      run: |
+        mvn deploy:deploy-file \
+          -DpomFile=bindings/java/pom.xml \
+          -DrepositoryId=clojars \
+          -Durl=https://clojars.org/repo \
+          -DgroupId=org.clojars.cartesiantheatrics \
+          -DartifactId=manifold3d \
+          -Dversion=${{env.VERSION}} \
+          -Dpackaging=jar \
+          -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar,linux-jar/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
+          -Dclassifiers=mac-x86_64,linux-x86_64 \
+          -Dtypes=jar,jar
+      env:
+        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
+        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}
