@@ -70,7 +70,7 @@ jobs:
       if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt)-linux --file pom.xml
+        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dos.classifier=linux-x86_64
     - name: Deploy Java Package
       if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
@@ -78,6 +78,7 @@ jobs:
         cd bindings/java
         mvn deploy:deploy-file \
           -Dfile=target/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
+          -DpomFile=pom.xml \
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
@@ -280,7 +281,7 @@ jobs:
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion="$(cat version.txt)-win" --file pom.xml
+        mvn versions:set -DnewVersion="$(cat version.txt)" --file pom.xml
         mvn package
     #- name: Deploy Java Package
     #  shell: bash
@@ -360,7 +361,7 @@ jobs:
       shell: bash
     - name: Check if version has changed
       id: check_version
-      run:
+      run: |
         if git diff --quiet HEAD~1 -- bindings/java/version.txt
         then
           echo "changed=false" >> $GITHUB_ENV
@@ -370,7 +371,7 @@ jobs:
     - name: Build Java package
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt)-mac --file pom.xml
+        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
         mvn package -Dos.classifier=mac-x86_64
     - name: Deploy Java Package
       if: env.changed == 'true' && matrix.parallel_backend == 'NONE'
@@ -378,6 +379,7 @@ jobs:
         cd bindings/java
         mvn deploy:deploy-file \
           -Dfile=target/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
+          -DpomFile=pom.xml \
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
