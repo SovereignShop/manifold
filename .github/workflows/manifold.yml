@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     outputs:
-      java_package_version_changed: steps.check_version.outputs.changed
+      java_package_version_changed: ${{ steps.check_version.outputs.changed }}
     container:
       image: docker://nvidia/cuda:12.0.1-devel-ubuntu22.04
     steps:
@@ -335,7 +335,7 @@ jobs:
   deploy_jars:
     runs-on: ubuntu-22.04
     needs: [build, build_mac]
-    if: github.event.pull_request.draft == false && needs.build.outputs.java_package_version_changed == 'true'
+    if: github.event.pull_request.draft == false && ${{ needs.build.outputs.java_package_version_changed }} == 'true'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
