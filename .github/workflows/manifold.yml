@@ -331,8 +331,8 @@ jobs:
 
   deploy_jars:
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.draft == false
     needs: [build, build_mac]
+    if: github.event.pull_request.draft == false && needs.build.outputs.java_package_version_changed == 'true'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
