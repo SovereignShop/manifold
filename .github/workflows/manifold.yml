@@ -17,6 +17,8 @@ jobs:
       matrix:
         cuda_support: [ON, OFF]
         parallel_backend: [NONE, OMP, TBB]
+    outputs:
+      java_release_version_changed: ${{steps.check_version.changed}}
     runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     container:
@@ -62,16 +64,25 @@ jobs:
       run: |
         if git diff --quiet HEAD~1 -- bindings/java/version.txt
         then
-          echo "changed=false" >> $GITHUB_ENV
+          echo "changed=false" >> $GITHUB_OUTPUTS
         else
-          echo "changed=true" >> $GITHUB_ENV
+          echo "changed=true" >> $GITHUB_OUTPUTS
         fi
+    - name: Set Classifier
+      run: |
+        if ${{matrix.cuda_support}} == 'ON'
+        then
+          echo "classifier=linux-${{matrix.parallel_backend}}-cuda-x86_64" >> $GITHUB_ENV
+        else
+          echo "classifier=linux-${{matrix.parallel_backend}}-x86_64" >> $GITHUB_ENV
+      env:
+        classifier: "linux-${{matrix.parallel_backend}}-$(if )
     - name: Build Java package
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dos.classifier=linux-x86_64
+        mvn package -Dos.classifier=${{env.classifier}}
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -329,8 +340,8 @@ jobs:
 
   deploy_jars:
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.draft == false
     needs: [build, build_mac]
+    if: github.event.pull_request.draft == false && needs.build.outputs.java_release_version_changed == 'true'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -338,6 +349,7 @@ jobs:
         submodules: recursive
         fetch-depth: 2
     - name: Set up JDK 11
+      if:
       uses: actions/setup-java@v2
       with:
         java-version: '11'
@@ -351,27 +363,17 @@ jobs:
       with:
         name: manifold_java_bindings_mac
         path: mac-jar
-    - name: Get version
-      id: get_version
-      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
-      shell: bash
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: manifold_java_bindings_linux_TBB_ON_${{env.version}}
+        name: manifold_java_bindings_linux_TBB_ON_${{env.VERSION}}
         path: linux-jar
-    - name: Check if version has changed
-      id: check_version
-      run: |
-        if git diff --quiet HEAD~1 -- bindings/java/version.txt
-        then
-          echo "changed=false" >> $GITHUB_ENV
-        else
-          echo "changed=true" >> $GITHUB_ENV
-        fi
     - name: Deploy Jars
-      if: env.changed == 'true'
       run: |
+        linux-omp-jar = linux-jar/manifold3d-${{env.VERSION}}-linux-OMP-x86_64.jar;
+        linux-tbb-jar = linux-jar/manifold3d-${{env.VERSION}}-linux-TBB-x86_64.jar;
+        mac-jar-file = jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar;
+
         mvn versions:set -DnewVersion=$(cat bindings/java/version.txt) --file bindings/java/pom.xml
         mvn deploy:deploy-file \
           -DpomFile=bindings/java/pom.xml \
@@ -381,11 +383,11 @@ jobs:
           -DartifactId=manifold3d \
           -Dversion=${{env.VERSION}} \
           -Dpackaging=jar \
-          -Dfile=linux-jar/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
-          -Dclassifier=linux-x86_64 \
-          -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
-          -Dclassifiers=mac-x86_64 \
-          -Dtypes=jar \
+          -Dfile=linux-omp-jar \
+          -Dclassifier=linux-OMP-x86_64 \
+          -Dfiles=mac-jar-file,linux-tbb-file \
+          -Dclassifiers=mac-x86_64,linux-TBB-x86_64 \
+          -Dtypes=jar,jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
