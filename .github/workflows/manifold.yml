@@ -70,10 +70,17 @@ jobs:
         fi
     - name: Build Java package
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
+      shell: bash
       run: |
         cd bindings/java
+
+        BACKEND=${{matrix.parallel_backend}}
+        if [ ${{ matrix.cuda_support }} = "ON" ]; then
+            BACKEND="$BACKEND-cuda"
+        fi
+
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dos.classifier=linux-${{matrix.parallel_backend}}-x86_64
+        mvn package -Dos.classifier=linux-$BACKEND-x86_64
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
@@ -370,12 +377,18 @@ jobs:
       with:
         name: manifold_java_bindings_linux_TBB_OFF_${{env.VERSION}}
         path: linux-tbb-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_linux_TBB_ON_${{env.VERSION}}
+        path: linux-tbb-cuda-jar
     - name: Deploy Jars
       shell: bash
       run: |
         VERSION=$(cat bindings/java/version.txt)
         linux_omp_jar_file=linux-omp-jar/manifold3d-$VERSION-linux-OMP-x86_64.jar
         linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
+        linux_tbb_cuda_jar_file=linux-tbb-cuda-jar/manifold3d-$VERSION-linux-TBB-cuda-x86_64.jar
         mac_tbb_jar_file=mac-tbb-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
 
         mvn versions:set -DnewVersion=$VERSION --file bindings/java/pom.xml
@@ -389,9 +402,9 @@ jobs:
           -Dpackaging=jar \
           -Dfile=$linux_omp_jar_file \
           -Dclassifier=linux-OMP-x86_64 \
-          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file \
-          -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64 \
-          -Dtypes=jar,jar \
+          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file,linux_tbb_cuda_jar_file \
+          -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64,linux-TBB-cuda-x86_64 \
+          -Dtypes=jar,jar,jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
