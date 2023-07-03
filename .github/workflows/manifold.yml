@@ -108,7 +108,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       uses: actions/upload-artifact@v3
       with:
-        name: manifold_java_bindings_linux
+        name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}
         path: bindings/java/target/*.jar
 
   build_cbind:
