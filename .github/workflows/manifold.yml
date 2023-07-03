@@ -108,7 +108,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       uses: actions/upload-artifact@v3
       with:
-        name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}
+        name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}_${{env.VERSION}}
         path: bindings/java/target/*.jar
 
   build_cbind:
@@ -351,15 +351,15 @@ jobs:
       with:
         name: manifold_java_bindings_mac
         path: mac-jar
-    - name: Download Artifacts
-      uses: actions/download-artifact@v2
-      with:
-        name: manifold_java_bindings_linux
-        path: linux-jar
     - name: Get version
       id: get_version
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
       shell: bash
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_linux_TBB_ON_${{env.version}}
+        path: linux-jar
     - name: Check if version has changed
       id: check_version
       run: |
