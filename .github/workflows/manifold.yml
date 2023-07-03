@@ -358,8 +358,8 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: manifold_java_bindings_mac
-        path: mac-jar
+        name: manifold_java_bindings_mac_TBB_${{env.VERSION}}
+        path: mac-tbb-jar
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
@@ -376,7 +376,7 @@ jobs:
         VERSION=$(cat bindings/java/version.txt)
         linux_omp_jar_file=linux-omp-jar/manifold3d-$VERSION-linux-OMP-x86_64.jar
         linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
-        mac_tbb_jar_file=mac-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
+        mac_tbb_jar_file=mac-tbb-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
 
         mvn versions:set -DnewVersion=$VERSION --file bindings/java/pom.xml
         mvn deploy:deploy-file \
