@@ -67,7 +67,7 @@ jobs:
           echo "changed=true" >> $GITHUB_ENV
         fi
     - name: Build Java package
-      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'ON')
+      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
@@ -105,7 +105,7 @@ jobs:
         fail_ci_if_error: false
         name: ${{matrix.parallel_backend}}-${{matrix.cuda_support}}
     - name: Upload artifact
-      if: matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'ON'
+      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       uses: actions/upload-artifact@v3
       with:
         name: manifold_java_bindings_linux
