@@ -54,7 +54,7 @@ jobs:
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
     - name: Build Java package
-      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'OFF')
+      if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'ON')
       run: |
         cd bindings/java
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
@@ -92,7 +92,7 @@ jobs:
         fail_ci_if_error: false
         name: ${{matrix.parallel_backend}}-${{matrix.cuda_support}}
     - name: Upload artifact
-      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
+      if: matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'ON'
       uses: actions/upload-artifact@v3
       with:
         name: manifold_java_bindings_linux
