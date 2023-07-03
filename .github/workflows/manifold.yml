@@ -385,7 +385,7 @@ jobs:
           -Dclassifier=linux-x86_64 \
           -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
           -Dclassifiers=mac-x86_64 \
-          -Dtypes=jar,jar \
+          -Dtypes=jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
