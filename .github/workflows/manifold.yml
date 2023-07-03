@@ -301,10 +301,13 @@ jobs:
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
       shell: bash
     - name: Build Java package
+      shell: bash
       run: |
         cd bindings/java
-        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
-        mvn package -Dos.classifier=mac-x86_64
+        JAVA_PACKAGE_VERSION=$(cat version.txt)
+        echo "JAVA_PACKAGE_VERSION=$JAVA_PACKAGE_VERSION" >> $GITHUB_ENV
+        mvn versions:set -DnewVersion=$JAVA_PACKAGE_VERSION --file pom.xml
+        mvn package -Dos.classifier=mac-${{matrix.parallel_backend}}-x86_64
     - name: Test
       run: |
         cd build/bin
@@ -312,7 +315,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: manifold_java_bindings_mac
+        name: manifold_java_bindings_mac_${{matrix.parallel_backend}}_${{env.JAVA_PACKAGE_VERSION}}
         path: bindings/java/target/*.jar
 
   build_nix:
@@ -348,11 +351,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y maven
-    - name: Download Artifacts
-      uses: actions/download-artifact@v2
-      with:
-        name: manifold_java_bindings_mac
-        path: mac-jar
     - name: Get version
       id: get_version
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
@@ -360,34 +358,40 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: manifold_java_bindings_linux_TBB_ON_${{env.version}}
-        path: linux-jar
-    - name: Check if version has changed
-      id: check_version
-      run: |
-        if git diff --quiet HEAD~1 -- bindings/java/version.txt
-        then
-          echo "changed=false" >> $GITHUB_ENV
-        else
-          echo "changed=true" >> $GITHUB_ENV
-        fi
+        name: manifold_java_bindings_mac
+        path: mac-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_linux_OMP_OFF_${{env.VERSION}}
+        path: linux-omp-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: manifold_java_bindings_linux_TBB_OFF_${{env.VERSION}}
+        path: linux-tbb-jar
     - name: Deploy Jars
-      if: env.changed == 'true'
+      shell: bash
       run: |
-        mvn versions:set -DnewVersion=$(cat bindings/java/version.txt) --file bindings/java/pom.xml
+        VERSION=$(cat bindings/java/version.txt)
+        linux_omp_jar_file=linux-omp-jar/manifold3d-$VERSION-linux-OMP-x86_64.jar
+        linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
+        mac_tbb_jar_file=mac-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
+
+        mvn versions:set -DnewVersion=$VERSION --file bindings/java/pom.xml
         mvn deploy:deploy-file \
           -DpomFile=bindings/java/pom.xml \
           -DrepositoryId=clojars \
           -Durl=https://clojars.org/repo \
           -DgroupId=org.clojars.cartesiantheatrics \
           -DartifactId=manifold3d \
-          -Dversion=${{env.VERSION}} \
+          -Dversion=$VERSION \
           -Dpackaging=jar \
-          -Dfile=linux-jar/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
-          -Dclassifier=linux-x86_64 \
-          -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
-          -Dclassifiers=mac-x86_64 \
-          -Dtypes=jar \
+          -Dfile=$linux_omp_jar_file \
+          -Dclassifier=linux-OMP-x86_64 \
+          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file \
+          -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64 \
+          -Dtypes=jar,jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
