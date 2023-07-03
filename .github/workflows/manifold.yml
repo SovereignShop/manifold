@@ -380,8 +380,10 @@ jobs:
           -DartifactId=manifold3d \
           -Dversion=${{env.VERSION}} \
           -Dpackaging=jar \
-          -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar,linux-jar/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
-          -Dclassifiers=mac-x86_64,linux-x86_64 \
+          -Dfile=linux-jar/manifold3d-${{env.VERSION}}-linux-x86_64.jar \
+          -Dclassifier=linux-x86_64 \
+          -Dfiles=mac-jar/manifold3d-${{env.VERSION}}-mac-x86_64.jar \
+          -Dclassifiers=mac-x86_64 \
           -Dtypes=jar,jar
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
