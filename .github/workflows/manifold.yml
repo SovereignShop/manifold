@@ -372,6 +372,7 @@ jobs:
     - name: Deploy Jars
       if: env.changed == 'true'
       run: |
+        mvn versions:set -DnewVersion=$(cat bindings/java/version.txt) --file bindings/java/pom.xml
         mvn deploy:deploy-file \
           -DpomFile=bindings/java/pom.xml \
           -DrepositoryId=clojars \
