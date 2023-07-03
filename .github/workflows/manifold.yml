@@ -53,6 +53,19 @@ jobs:
         mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
+    - name: Get version
+      id: get_version
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
+      run: |
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
+        then
+          echo "changed=false" >> $GITHUB_ENV
+        else
+          echo "changed=true" >> $GITHUB_ENV
+        fi
     - name: Build Java package
       if: env.changed == 'true' && (matrix.parallel_backend == 'TBB' && matrix.cuda_support == 'ON')
       run: |
