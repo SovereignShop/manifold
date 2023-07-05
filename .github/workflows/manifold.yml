@@ -61,11 +61,14 @@ jobs:
       shell: bash
     - name: Check if version has changed
       id: check_version
+      shell: bash
       run: |
         if git diff --quiet HEAD~1 -- bindings/java/version.txt
         then
+          echo "Version Unchanged!"
           echo "changed=false" >> "$GITHUB_OUTPUT"
         else
+          echo "Version Changed!"
           echo "changed=true" >> "$GITHUB_OUTPUT"
         fi
     - name: Build Java package
@@ -342,7 +345,7 @@ jobs:
   deploy_jars:
     runs-on: ubuntu-22.04
     needs: [build, build_mac]
-    if: github.event.pull_request.draft == false && ${{ needs.build.outputs.java_package_version_changed }} == 'true'
+    if: github.event.pull_request.draft == false && ${{needs.build.outputs.java_package_version_changed}} == 'true'
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
