@@ -75,13 +75,17 @@ jobs:
       run: |
         cd bindings/java
 
-        BACKEND="${{matrix.parallel_backend}}-"
+        BACKEND="${{matrix.parallel_backend}}"
         if [ ${{matrix.parallel_backend}} = "NONE"]; then
             BACKEND=""
         fi
 
-        if [ ${{ matrix.cuda_support }} = "ON" ]; then
-            BACKEND="$BACKENDcuda"
+        if [  ${{ matrix.cuda_support }} = "ON" ]; then
+            if [ ${{matrix.parallel_backend}} != "NONE" ]; then
+                BACKEND="$BACKEND-cuda"
+            else
+                BACKEND="cuda"
+            fi
         fi
 
         mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
@@ -96,21 +100,21 @@ jobs:
         ./manifold_test
         cd ../../
         python3 bindings/python/examples/run_all.py
-    - name: Coverage Report
-      # only do code coverage for default sequential backend, it seems that TBB
-      # backend will cause failure
-      # perhaps issue related to invalid memory access?
-      if: matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
-      run: |
-        cd build
-        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
-        lcov --capture --initial --directory . --output-file ./code_coverage_init.info
-        cd bin
-        ./manifold_test
-        cd ../
-        lcov --capture --directory . --output-file ./code_coverage_test.info
-        lcov --add-tracefile ./code_coverage_init.info --add-tracefile ./code_coverage_test.info --output-file ./code_coverage_total.info
-        lcov --remove ./code_coverage_total.info '/usr/*' '*/third_party/*' '*/test/*' '*/extras/*' '*/bindings/*' --output-file ./code_coverage.info
+    #- name: Coverage Report
+    #  # only do code coverage for default sequential backend, it seems that TBB
+    #  # backend will cause failure
+    #  # perhaps issue related to invalid memory access?
+    #  if: matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
+    #  run: |
+    #    cd build
+    #    cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
+    #    lcov --capture --initial --directory . --output-file ./code_coverage_init.info
+    #    cd bin
+    #    ./manifold_test
+    #    cd ../
+    #    lcov --capture --directory . --output-file ./code_coverage_test.info
+    #    lcov --add-tracefile ./code_coverage_init.info --add-tracefile ./code_coverage_test.info --output-file ./code_coverage_total.info
+    #    lcov --remove ./code_coverage_total.info '/usr/*' '*/third_party/*' '*/test/*' '*/extras/*' '*/bindings/*' --output-file ./code_coverage.info
     - uses: codecov/codecov-action@v2
       with:
         files: build/code_coverage.info
