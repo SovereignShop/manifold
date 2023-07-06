@@ -368,7 +368,7 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: manifold_java_bindings_linux_NONE_OFF_${{env.VERSION}}
+        name: manifold_java_bindings_linux_NONE_ON_${{env.VERSION}}
         path: linux-jar
     - name: Download Artifacts
       uses: actions/download-artifact@v2
@@ -394,7 +394,7 @@ jobs:
       shell: bash
       run: |
         VERSION=$(cat bindings/java/version.txt)
-        linux_jar_file=linux-jar/manifold3d-$VERSION-linux-x86_64.jar
+        linux_cuda_jar_file=linux-jar/manifold3d-$VERSION-linux-cuda-x86_64.jar
         linux_omp_jar_file=linux-omp-jar/manifold3d-$VERSION-linux-OMP-x86_64.jar
         linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
         linux_tbb_cuda_jar_file=linux-tbb-cuda-jar/manifold3d-$VERSION-linux-TBB-cuda-x86_64.jar
