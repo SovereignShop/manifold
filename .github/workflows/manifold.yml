@@ -411,7 +411,7 @@ jobs:
           -Dpackaging=jar \
           -Dfile=$linux_omp_jar_file \
           -Dclassifier=linux-OMP-x86_64 \
-          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_jar_file \
+          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_cuda_jar_file \
           -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64,linux-TBB-cuda-x86_64,linux-x86_64 \
           -Dtypes=jar,jar,jar,jar \
           --settings=bindings/java/settings.xml
