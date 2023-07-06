@@ -50,7 +50,6 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
     - name: Build ${{matrix.backend}}
-      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         mkdir build
         cd build
@@ -72,7 +71,6 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
         fi
     - name: Build Java package
-      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       shell: bash
       run: |
         cd bindings/java
@@ -80,6 +78,7 @@ jobs:
         BACKEND="${{matrix.parallel_backend}}-"
         if [ ${{matrix.parallel_backend}} = "NONE"]; then
             BACKEND=""
+        fi
 
         if [ ${{ matrix.cuda_support }} = "ON" ]; then
             BACKEND="$BACKENDcuda"
@@ -114,13 +113,11 @@ jobs:
         lcov --add-tracefile ./code_coverage_init.info --add-tracefile ./code_coverage_test.info --output-file ./code_coverage_total.info
         lcov --remove ./code_coverage_total.info '/usr/*' '*/third_party/*' '*/test/*' '*/extras/*' '*/bindings/*' --output-file ./code_coverage.info
     - uses: codecov/codecov-action@v2
-      if: matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
       with:
         files: build/code_coverage.info
         fail_ci_if_error: false
         name: ${{matrix.parallel_backend}}-${{matrix.cuda_support}}
     - name: Upload artifact
-      if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       uses: actions/upload-artifact@v3
       with:
         name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}_${{env.VERSION}}
