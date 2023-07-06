@@ -102,7 +102,6 @@ jobs:
       # perhaps issue related to invalid memory access?
       if: matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
       run: |
-        mkdir build
         cd build
         cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
         lcov --capture --initial --directory . --output-file ./code_coverage_init.info
