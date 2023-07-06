@@ -76,11 +76,11 @@ jobs:
         cd bindings/java
 
         BACKEND=""
-        if [ ${{matrix.parallel_backend}} = "NONE" && ${{matrix.cuda_support}} = "ON"]; then
+        if [ "${{matrix.parallel_backend}}" = "NONE" ] && [ "${{matrix.cuda_support}}" = "ON" ]; then
             BACKEND="-cuda"
-        elif [ ${{matrix.parallel_backend}} = "NONE" && ${{matrix.cuda_support}} = "OFF"]; then
+        elif [ "${{matrix.parallel_backend}}" = "NONE" ] && [ "${{matrix.cuda_support}}" = "OFF" ]; then
             BACKEND=""
-        elif [ ${{matrix.cuda_support}} = "ON" ]; then
+        elif [ "${{matrix.cuda_support}}" = "ON" ]; then
             BACKEND="-${{matrix.parallel_backend}}-cuda"
         else
             BACKEND="-${{matrix.parallel_backend}}"
