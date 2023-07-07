@@ -9,6 +9,9 @@ import manifold3d.manifold.CrossSection;
 import manifold3d.glm.DoubleVec3Vector;
 import manifold3d.glm.DoubleMat4x3Vector;
 import manifold3d.glm.DoubleMat4x3Vector;
+import manifold3d.pub.PolygonsVector;
+import manifold3d.pub.Polygons;
+import manifold3d.pub.SimplePolygon;
 import manifold3d.UIntVecVector;
 
 import manifold3d.Manifold;
@@ -30,6 +33,9 @@ public class MeshUtils extends Pointer {
 
         return Polyhedron(verticesPtr, nVertices, faceBufPtr, lengthsPtr, nFaces);
     }
+    public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms);
+    public static native @ByVal Manifold Loft(@ByRef Polygons polygons, @ByRef DoubleMat4x3Vector transforms);
+    public static native @ByVal Manifold Loft(@ByRef PolygonsVector polygons, @ByRef DoubleMat4x3Vector transforms);
 
     public static native @ByVal Manifold Loft(@ByRef CrossSectionVector sections, @ByRef DoubleMat4x3Vector transforms);
     public static native @ByVal Manifold Loft(@ByRef CrossSection section, @ByRef DoubleMat4x3Vector transforms);
