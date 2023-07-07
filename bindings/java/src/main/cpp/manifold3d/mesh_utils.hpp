@@ -76,7 +76,7 @@ manifold::Manifold Polyhedron(double* vertices, std::size_t nVertices, int* face
     return Polyhedron(verts, faces);
 }
 
-manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
     std::vector<glm::vec3> vertPos;
     std::vector<glm::ivec3> triVerts;
 
@@ -88,7 +88,7 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
     std::size_t nVerticesInEachSection = 0;
 
     for (std::size_t i = 0; i < sections.size(); ++i) {
-        const auto& polygons = sections[i].ToPolygons();
+        const manifold::Polygons polygons = sections[i];
         glm::mat4x3 transform = transforms[i];
 
         for (const auto& polygon : polygons) {
@@ -128,13 +128,13 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
         offset += nVerticesInEachSection;
     }
 
-    auto frontPolygons = sections.front().ToPolygons();
+    auto frontPolygons = sections.front();
     auto frontTriangles = manifold::Triangulate(frontPolygons, -1.0);
     for (auto& tri : frontTriangles) {
         triVerts.push_back({tri.z, tri.y, tri.x});
     }
 
-    auto backPolygons = sections.back().ToPolygons();
+    auto backPolygons = sections.back();
     auto backTriangles = manifold::Triangulate(backPolygons, -1.0);
     for (auto& triangle : backTriangles) {
         triangle.x += offset - nVerticesInEachSection;
@@ -149,10 +149,35 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
     return manifold::Manifold(mesh);
 }
 
-manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<glm::mat4x3>& transforms) {
-    std::vector<manifold::CrossSection> sections(transforms.size());
+manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<glm::mat4x3>& transforms) {
+    std::vector<manifold::Polygons> polys;
+    for (auto section : sections) {
+        polys.push_back({section});
+    }
+    return Loft(polys, transforms);
+}
+
+manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vector<glm::mat4x3>& transforms) {
+    std::vector<manifold::Polygons> polys;
     for (std::size_t i = 0; i < transforms.size(); i++) {
-        sections[i] = section;
+        polys.push_back({section});
+    }
+    return Loft(polys, transforms);
+}
+
+manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<glm::mat4x3>& transforms) {
+    std::vector<manifold::Polygons> polys;
+    for (auto section : sections) {
+        polys.push_back(section.ToPolygons());
+    }
+    return Loft(polys, transforms);
+}
+
+manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<glm::mat4x3>& transforms) {
+    std::vector<manifold::Polygons> sections(transforms.size());
+    auto polys = section.ToPolygons();
+    for (std::size_t i = 0; i < transforms.size(); i++) {
+        sections[i] = polys;
     }
     return Loft(sections, transforms);
 }
