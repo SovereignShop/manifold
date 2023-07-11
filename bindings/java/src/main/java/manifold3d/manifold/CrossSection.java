@@ -99,6 +99,12 @@ public class CrossSection extends Pointer {
 
     public static native @ByVal CrossSection Circle(float radius, int circularSegments);
     public static native @ByVal CrossSection Square(@ByRef DoubleVec2 size, boolean center);
+    public static CrossSection Square(double x, double y, boolean center) {
+        return CrossSection.Square(new DoubleVec2(x, y), center);
+    }
+    public static CrossSection Square(double x, double y) {
+        return CrossSection.Square(new DoubleVec2(x, y), false);
+    }
 
     @Name("ToPolygons") public native @ByVal Polygons toPolygons();
 }

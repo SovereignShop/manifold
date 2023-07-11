@@ -79,4 +79,7 @@ public class DoubleMat4x3 extends DoublePointer implements Iterable<DoubleVec3> 
     public DoubleMat4x3 translate(@ByRef DoubleVec3 vec) {
         return MatrixTransforms.Translate(this, vec);
     }
+    public DoubleMat4x3 translate(double x, double y, double z) {
+        return MatrixTransforms.Translate(this, new DoubleVec3(x, y, z));
+    }
 }

@@ -176,7 +176,12 @@ public class Manifold extends Pointer {
     public static native @ByVal Manifold Smooth(@ByRef DoubleMesh mesh, @ByRef SmoothnessVector sharpenedEdges);
     public static native @ByVal Manifold Tetrahedron();
     public static native @ByVal Manifold Cube(@ByRef DoubleVec3 size, boolean center);
+
     public static native @ByVal Manifold Cylinder(float height, float radiusLow, float radiusHigh, int circularSegments, boolean center);
+    public static native @ByVal Manifold Cylinder(float height, float radiusLow, float radiusHigh, int circularSegments);
+    public static native @ByVal Manifold Cylinder(float height, float radiusLow, float radiusHigh);
+    public static native @ByVal Manifold Cylinder(float height, float radius);
+
     public static native @ByVal Manifold Sphere(float radius, int circularSegments);
     public static native @ByVal Manifold Extrude(@ByRef CrossSection crossSection, float height, int nDivisions, float twistDegrees, @ByRef DoubleVec2 scaleTop);
     public static @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments) {
