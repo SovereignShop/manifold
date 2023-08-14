@@ -885,4 +885,12 @@ SparseIndices Manifold::Impl::VertexCollisionsZ(
     const VecDH<glm::vec3>& vertsIn) const {
   return collider_.Collisions(vertsIn);
 }
+
+/**
+ * Returns CrossSection on the  XY plane.
+ */
+  Manifold::CrossSection Manifold::Impl::GetCrossSection() {
+
+}
+
 }  // namespace manifold
