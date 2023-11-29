@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         cuda_support: [ON, OFF]
-        parallel_backend: [NONE, OMP, TBB]
+        parallel_backend: [NONE, TBB]
     runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     outputs:
@@ -139,11 +139,11 @@ jobs:
       with:
         submodules: recursive
     - uses: jwlawson/actions-setup-cmake@v1.12
-    - name: Build C bindings with OMP and CUDA
+    - name: Build C bindings with TBB and CUDA
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=OMP -DMANIFOLD_USE_CUDA=ON .. && make
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=TBB -DMANIFOLD_USE_CUDA=ON .. && make
     - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
       # note that the test for CUDA backend does not really test CUDA, as we
       # don't have CUDA GPU on GitHub Action
