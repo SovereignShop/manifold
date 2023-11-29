@@ -34,7 +34,10 @@ import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
 @Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"},
-          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS, LibraryPaths.QHULL },
+          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR,
+                       LibraryPaths.CROSS_SECTION_LIB_DIR,
+                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS,
+                       LibraryPaths.QHULL },
           link = {"manifold"})
 @Namespace("manifold")
 public class Manifold extends Pointer {
@@ -45,6 +48,7 @@ public class Manifold extends Pointer {
             try {
                 System.load(Loader.extractResource("/libmeshIO.so", null, "libmeshIO", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libClipper2.so.1.2.1", null, "libClipper2", ".so").getAbsolutePath());
+                System.load(Loader.extractResource("/libcross_section.so", null, "libcross_section", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -55,6 +59,8 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/meshIO.dll", null, "meshIO", ".dll").getAbsolutePath());
                 System.out.println("Loading Clipper");
                 System.load(Loader.extractResource("/Clipper2.dll", null, "Clipper2", ".dll").getAbsolutePath());
+                System.out.println("Loading cross section");
+                System.load(Loader.extractResource("/cross_section.dll", null, "cross_section", ".dll").getAbsolutePath());
                 System.out.println("Loading manifold");
                 System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
                 System.out.println("Finished Loading.");
@@ -65,11 +71,14 @@ public class Manifold extends Pointer {
             try {
                 System.out.println("Loading meshIO");
                 System.load(Loader.extractResource("/libmeshIO.dylib", null, "libmeshIO", ".dylib").getAbsolutePath());
-                System.out.println("Loading manifold");
-                System.load(Loader.extractResource("/libClipper2.1.2.1.dylib", null, "libClipper2", ".dylib").getAbsolutePath());
-                System.out.println("Finished Loading.");
-                System.load(Loader.extractResource("/libmanifold.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
                 System.out.println("Loading Clipper");
+                System.load(Loader.extractResource("/libClipper2.1.2.1.dylib", null, "libClipper2", ".dylib").getAbsolutePath());
+                System.out.println("Loading Cross Section");
+                System.load(Loader.extractResource("/libcross_section.dylib", null, "libcross_section", ".dylib").getAbsolutePath());
+                System.out.println("Loading Manifold");
+                System.load(Loader.extractResource("/libmanifold.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
+                System.out.println("Finished Loading.");
+
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
