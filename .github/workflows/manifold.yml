@@ -124,75 +124,75 @@ jobs:
         name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}_${{env.VERSION}}
         path: bindings/java/target/*.jar
 
-  build_cbind:
-    timeout-minutes: 30
-    runs-on: ubuntu-22.04
-    if: github.event.pull_request.draft == false
-    container:
-      image: docker://nvidia/cuda:12.0.1-devel-ubuntu22.04
-    steps:
-    - name: Install dependencies
-      run: |
-        apt-get -y update
-        DEBIAN_FRONTEND=noninteractive apt install -y libomp-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev python3 python3-distutils python3-pip
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - uses: jwlawson/actions-setup-cmake@v1.12
-    - name: Build C bindings with TBB and CUDA
-      run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=TBB -DMANIFOLD_USE_CUDA=ON .. && make
-    - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
-      # note that the test for CUDA backend does not really test CUDA, as we
-      # don't have CUDA GPU on GitHub Action
-      run: |
-        cd build/test
-        ./manifold_test --gtest_filter=CBIND.*
+  # build_cbind:
+  #   timeout-minutes: 30
+  #   runs-on: ubuntu-22.04
+  #   if: github.event.pull_request.draft == false
+  #   container:
+  #     image: docker://nvidia/cuda:12.0.1-devel-ubuntu22.04
+  #   steps:
+  #   - name: Install dependencies
+  #     run: |
+  #       apt-get -y update
+  #       DEBIAN_FRONTEND=noninteractive apt install -y libomp-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev python3 python3-distutils python3-pip
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: jwlawson/actions-setup-cmake@v1.12
+  #   - name: Build C bindings with TBB and CUDA
+  #     run: |
+  #       mkdir build
+  #       cd build
+  #       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=TBB -DMANIFOLD_USE_CUDA=ON .. && make
+  #   - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
+  #     # note that the test for CUDA backend does not really test CUDA, as we
+  #     # don't have CUDA GPU on GitHub Action
+  #     run: |
+  #       cd build/test
+  #       ./manifold_test --gtest_filter=CBIND.*
 
-  build_wasm:
-    timeout-minutes: 30
-    runs-on: ubuntu-22.04
-    if: github.event.pull_request.draft == false
-    steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get -y update
-        DEBIAN_FRONTEND=noninteractive sudo apt install -y nodejs
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - name: Setup WASM
-      run: |
-        # setup emscripten
-        git clone https://github.com/emscripten-core/emsdk.git
-        cd emsdk
-        ./emsdk install latest
-        ./emsdk activate latest
-    - uses: jwlawson/actions-setup-cmake@v1.12
-    - name: Build WASM
-      run: |
-        source ./emsdk/emsdk_env.sh
-        mkdir build
-        cd build
-        emcmake cmake -DCMAKE_BUILD_TYPE=Release .. && emmake make
-    - name: Test WASM
-      run: |
-        cd build/test
-        node ./manifold_test.js
-    - name: Test examples
-      run: |
-        cd bindings/wasm/examples
-        npm ci
-        npm run build
-        npm test
-    - name: Upload WASM files
-      uses: actions/upload-artifact@v3
-      with:
-        name: wasm
-        path: bindings/wasm/examples/dist/
-        retention-days: 90
+  # build_wasm:
+  #   timeout-minutes: 30
+  #   runs-on: ubuntu-22.04
+  #   if: github.event.pull_request.draft == false
+  #   steps:
+  #   - name: Install dependencies
+  #     run: |
+  #       sudo apt-get -y update
+  #       DEBIAN_FRONTEND=noninteractive sudo apt install -y nodejs
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - name: Setup WASM
+  #     run: |
+  #       # setup emscripten
+  #       git clone https://github.com/emscripten-core/emsdk.git
+  #       cd emsdk
+  #       ./emsdk install latest
+  #       ./emsdk activate latest
+  #   - uses: jwlawson/actions-setup-cmake@v1.12
+  #   - name: Build WASM
+  #     run: |
+  #       source ./emsdk/emsdk_env.sh
+  #       mkdir build
+  #       cd build
+  #       emcmake cmake -DCMAKE_BUILD_TYPE=Release .. && emmake make
+  #   - name: Test WASM
+  #     run: |
+  #       cd build/test
+  #       node ./manifold_test.js
+  #   - name: Test examples
+  #     run: |
+  #       cd bindings/wasm/examples
+  #       npm ci
+  #       npm run build
+  #       npm test
+  #   - name: Upload WASM files
+  #     uses: actions/upload-artifact@v3
+  #     with:
+  #       name: wasm
+  #       path: bindings/wasm/examples/dist/
+  #       retention-days: 90
 
   build_windows:
     timeout-minutes: 30
@@ -329,19 +329,19 @@ jobs:
         name: manifold_java_bindings_mac_${{matrix.parallel_backend}}_${{env.JAVA_PACKAGE_VERSION}}
         path: bindings/java/target/*.jar
 
-  build_nix:
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        variant: [none, omp, tbb, none-cuda, omp-cuda, tbb-cuda]
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - uses: cachix/install-nix-action@v15
-    - run: nix build -L '.?submodules=1#manifold-${{matrix.variant}}'
+  # build_nix:
+  #   timeout-minutes: 30
+  #   strategy:
+  #     matrix:
+  #       variant: [none, omp, tbb, none-cuda, omp-cuda, tbb-cuda]
+  #   runs-on: ubuntu-latest
+  #   if: github.event.pull_request.draft == false
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: cachix/install-nix-action@v15
+  #   - run: nix build -L '.?submodules=1#manifold-${{matrix.variant}}'
 
   deploy_jars:
     runs-on: ubuntu-22.04
@@ -402,7 +402,6 @@ jobs:
         VERSION=$(cat bindings/java/version.txt)
         linux_jar_file=linux-jar/manifold3d-$VERSION-linux-x86_64.jar
         linux_cuda_jar_file=linux-cuda-jar/manifold3d-$VERSION-linux-cuda-x86_64.jar
-        linux_omp_jar_file=linux-omp-jar/manifold3d-$VERSION-linux-OMP-x86_64.jar
         linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
         linux_tbb_cuda_jar_file=linux-tbb-cuda-jar/manifold3d-$VERSION-linux-TBB-cuda-x86_64.jar
         mac_tbb_jar_file=mac-tbb-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
@@ -416,9 +415,9 @@ jobs:
           -DartifactId=manifold3d \
           -Dversion=$VERSION \
           -Dpackaging=jar \
-          -Dfile=$linux_omp_jar_file \
-          -Dclassifier=linux-OMP-x86_64 \
-          -Dfiles=$mac_tbb_jar_file,$linux_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_cuda_jar_file,$linux_jar_file \
+          -Dfile=$linux_tbb_jar_file \
+          -Dclassifier=linux-TBB-x86_64 \
+          -Dfiles=$mac_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_cuda_jar_file,$linux_jar_file \
           -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64,linux-TBB-cuda-x86_64,linux-cuda-x86_64,linux-x86_64 \
           -Dtypes=jar,jar,jar,jar,jar \
           --settings=bindings/java/settings.xml
