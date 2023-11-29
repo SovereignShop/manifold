@@ -25,14 +25,27 @@ declare class GLTFNode {
   clone(parent?: GLTFNode): GLTFNode;
 }
 
+type Attribute = 'POSITION'|'NORMAL'|'TANGENT'|'TEXCOORD_0'|'TEXCOORD_1'|
+    'COLOR_0'|'JOINTS_0'|'WEIGHTS_0'|'SKIP_1'|'SKIP_2'|'SKIP_3'|'SKIP_4';
+
 declare class GLTFMaterial {
-  attributes?: string[];
+  attributes?: Attribute[];
   roughness?: number;
   metallic?: number;
   baseColorFactor?: [number, number, number];
   alpha?: number;
   unlit?: boolean;
   name?: string;
+}
+
+declare const globalDefaults: {
+  roughness: number,
+  metallic: number,
+  baseColorFactor: [number, number, number],
+  alpha: number,
+  unlit: boolean,
+  animationLength: number,
+  animationMode: 'loop'|'ping-pong';
 }
 
 /**
@@ -42,8 +55,8 @@ declare class GLTFMaterial {
  * @param manifold The object to add properties to - returned for chaining.
  * @param material A set of material properties to apply to this manifold.
  */
-declare function setMaterial(
-    manifold: Manifold, material: GLTFMaterial): Manifold;
+declare function setMaterial(manifold: Manifold, material: GLTFMaterial):
+    Manifold;
 
 /**
  * Wrap any shape object with this method to display it and any copies in

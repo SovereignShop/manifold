@@ -14,14 +14,9 @@
 // limitations under the License.
 
 #pragma once
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
-#include <thrust/iterator/permutation_iterator.h>
-#include <thrust/iterator/zip_iterator.h>
-#include <thrust/tuple.h>
-
 #include <atomic>
 #include <mutex>
+#include <unordered_map>
 
 #ifdef MANIFOLD_DEBUG
 #include <chrono>
@@ -29,6 +24,7 @@
 #endif
 
 #include "par.h"
+#include "vec.h"
 
 namespace manifold {
 
@@ -104,18 +100,18 @@ thrust::counting_iterator<T> countAt(T i) {
   return thrust::make_counting_iterator(i);
 }
 
-inline __host__ __device__ int Next3(int i) {
+inline int Next3(int i) {
   constexpr glm::ivec3 next3(1, 2, 0);
   return next3[i];
 }
 
-inline __host__ __device__ int Prev3(int i) {
+inline int Prev3(int i) {
   constexpr glm::ivec3 prev3(2, 0, 1);
   return prev3[i];
 }
 
 template <typename T>
-__host__ __device__ T AtomicAdd(T& target, T add) {
+T AtomicAdd(T& target, T add) {
 #ifdef __CUDA_ARCH__
   // required for synchronization
   __threadfence();
@@ -131,7 +127,7 @@ __host__ __device__ T AtomicAdd(T& target, T add) {
 }
 
 template <>
-inline __host__ __device__ int AtomicAdd(int& target, int add) {
+inline int AtomicAdd(int& target, int add) {
 #ifdef __CUDA_ARCH__
   // required for synchronization
   __threadfence();
@@ -156,8 +152,7 @@ class strided_range {
 
     stride_functor(difference_type stride) : stride(stride) {}
 
-    __host__ __device__ difference_type
-    operator()(const difference_type& i) const {
+    difference_type operator()(const difference_type& i) const {
       return stride * i;
     }
   };
@@ -219,6 +214,63 @@ class ConcurrentSharedPtr {
   std::shared_ptr<T> impl;
   std::shared_ptr<std::recursive_mutex> mutex =
       std::make_shared<std::recursive_mutex>();
+};
+
+template <typename I = int, typename R = unsigned char>
+struct UnionFind {
+  Vec<I> parents;
+  // we do union by rank
+  // note that we shift rank by 1, rank 0 means it is not connected to anything
+  // else
+  Vec<R> ranks;
+
+  UnionFind(I numNodes) : parents(numNodes), ranks(numNodes, 0) {
+    sequence(autoPolicy(numNodes), parents.begin(), parents.end());
+  }
+
+  I find(I x) {
+    while (parents[x] != x) {
+      parents[x] = parents[parents[x]];
+      x = parents[x];
+    }
+    return x;
+  }
+
+  void unionXY(I x, I y) {
+    if (x == y) return;
+    if (ranks[x] == 0) ranks[x] = 1;
+    if (ranks[y] == 0) ranks[y] = 1;
+    x = find(x);
+    y = find(y);
+    if (x == y) return;
+    if (ranks[x] < ranks[y]) std::swap(x, y);
+    if (ranks[x] == ranks[y]) ranks[x]++;
+    parents[y] = x;
+  }
+
+  I connectedComponents(std::vector<I>& components) {
+    components.resize(parents.size());
+    I lonelyNodes = 0;
+    std::unordered_map<I, I> toLabel;
+    for (size_t i = 0; i < parents.size(); ++i) {
+      // we optimize for connected component of size 1
+      // no need to put them into the hashmap
+      if (ranks[i] == 0) {
+        components[i] = static_cast<I>(toLabel.size()) + lonelyNodes++;
+        continue;
+      }
+      parents[i] = find(i);
+      auto iter = toLabel.find(parents[i]);
+      if (iter == toLabel.end()) {
+        I s = static_cast<I>(toLabel.size()) + lonelyNodes;
+        toLabel.insert(std::make_pair(parents[i], s));
+        components[i] = s;
+      } else {
+        components[i] = iter->second;
+      }
+    }
+    return toLabel.size() + lonelyNodes;
+  }
 };
 /** @} */
 }  // namespace manifold

@@ -79,6 +79,13 @@ void ExportScene(aiScene* scene, const std::string& filename) {
   //   std::cout << i << ", id = " << desc->id << ", " << desc->description
   //             << std::endl;
   // }
+  auto ext = filename.substr(filename.length() - 4, 4);
+  if (ext == ".3mf") {
+    // Workaround https://github.com/assimp/assimp/issues/3816
+    aiNode* old_root = scene->mRootNode;
+    scene->mRootNode = new aiNode();
+    scene->mRootNode->addChildren(1, &old_root);
+  }
 
   auto result = exporter.Export(scene, GetType(filename), filename);
 
@@ -227,6 +234,7 @@ void ExportMesh(const std::string& filename, const MeshGL& mesh,
                    ? 1
                    : mesh.vertProperties[i * mesh.numProp +
                                          options.mat.colorChannels[j]];
+      c = glm::saturate(c);
       mesh_out->mColors[0][i] = aiColor4D(c.r, c.g, c.b, c.a);
     }
   }

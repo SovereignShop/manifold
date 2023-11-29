@@ -16,6 +16,7 @@
 #include <map>
 #include <numeric>
 
+#include "QuickHull.hpp"
 #include "boolean3.h"
 #include "csg_tree.h"
 #include "impl.h"
@@ -25,12 +26,12 @@ namespace {
 using namespace manifold;
 using namespace thrust::placeholders;
 
-ExecutionParams params;
+ExecutionParams manifoldParams;
 
 struct MakeTri {
-  const Halfedge* halfedges;
+  VecView<const Halfedge> halfedges;
 
-  __host__ __device__ void operator()(thrust::tuple<glm::ivec3&, int> inOut) {
+  void operator()(thrust::tuple<glm::ivec3&, int> inOut) {
     glm::ivec3& tri = thrust::get<0>(inOut);
     const int face = 3 * thrust::get<1>(inOut);
 
@@ -50,7 +51,7 @@ struct UpdateProperties {
   const Halfedge* halfedges;
   std::function<void(float*, glm::vec3, const float*)> propFunc;
 
-  __host__ __device__ void operator()(int tri) {
+  void operator()(int tri) {
     for (int i : {0, 1, 2}) {
       const int vert = halfedges[3 * tri + i].startVert;
       const int propVert = triProperties[tri][i];
@@ -169,7 +170,7 @@ Mesh Manifold::GetMesh() const {
   result.triVerts.resize(NumTri());
   // note that `triVerts` is `std::vector`, so we cannot use thrust::device
   thrust::for_each_n(thrust::host, zip(result.triVerts.begin(), countAt(0)),
-                     NumTri(), MakeTri({impl.halfedge_.cptrH()}));
+                     NumTri(), MakeTri({impl.halfedge_}));
 
   return result;
 }
@@ -217,7 +218,7 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
   out.faceID.resize(numTri);
   std::vector<int> triNew2Old(numTri);
   std::iota(triNew2Old.begin(), triNew2Old.end(), 0);
-  const TriRef* triRef = impl.meshRelation_.triRef.cptrD();
+  VecView<const TriRef> triRef = impl.meshRelation_.triRef;
   // Don't sort originals - keep them in order
   if (!isOriginal) {
     std::sort(triNew2Old.begin(), triNew2Old.end(), [triRef](int a, int b) {
@@ -259,7 +260,10 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
       out.triVerts[3 * tri + i] = impl.halfedge_[3 * oldTri + i].startVert;
 
     if (meshID != lastID) {
-      addRun(out, runNormalTransform, tri, meshIDtransform.at(meshID));
+      Impl::Relation rel;
+      auto it = meshIDtransform.find(meshID);
+      if (it != meshIDtransform.end()) rel = it->second;
+      addRun(out, runNormalTransform, tri, rel);
       meshIDtransform.erase(meshID);
       lastID = meshID;
     }
@@ -284,7 +288,9 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
 
   // Duplicate verts with different props
   std::vector<int> vert2idx(impl.NumVert(), -1);
-  std::map<std::pair<int, int>, int> vertPropPair;
+  std::vector<std::vector<glm::ivec2>> vertPropPair(impl.NumVert());
+  out.vertProperties.reserve(numVert * out.numProp);
+
   for (int run = 0; run < out.runOriginalID.size(); ++run) {
     for (int tri = out.runIndex[run] / 3; tri < out.runIndex[run + 1] / 3;
          ++tri) {
@@ -294,14 +300,19 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
         const int prop = triProp[i];
         const int vert = out.triVerts[3 * tri + i];
 
-        const auto it = vertPropPair.find({vert, prop});
-        if (it != vertPropPair.end()) {
-          out.triVerts[3 * tri + i] = it->second;
-          continue;
+        auto& bin = vertPropPair[vert];
+        bool bFound = false;
+        for (int k = 0; k < bin.size(); ++k) {
+          if (bin[k].x == prop) {
+            bFound = true;
+            out.triVerts[3 * tri + i] = bin[k].y;
+            break;
+          }
         }
+        if (bFound) continue;
         const int idx = out.vertProperties.size() / out.numProp;
-        vertPropPair.insert({{vert, prop}, idx});
         out.triVerts[3 * tri + i] = idx;
+        bin.push_back({prop, idx});
 
         for (int p : {0, 1, 2}) {
           out.vertProperties.push_back(impl.vertPos_[vert][p]);
@@ -310,6 +321,7 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
           out.vertProperties.push_back(
               impl.meshRelation_.properties[prop * numProp + p]);
         }
+
         if (updateNormals) {
           glm::vec3 normal;
           const int start = out.vertProperties.size() - out.numProp;
@@ -571,7 +583,7 @@ Manifold Manifold::SetProperties(
                      propFunc) const {
   auto pImpl = std::make_shared<Impl>(*GetCsgLeafNode().GetImpl());
   const int oldNumProp = NumProp();
-  const VecDH<float> oldProperties = pImpl->meshRelation_.properties;
+  const Vec<float> oldProperties = pImpl->meshRelation_.properties;
 
   auto& triProperties = pImpl->meshRelation_.triProperties;
   if (numProp == 0) {
@@ -587,17 +599,16 @@ Manifold Manifold::SetProperties(
           triProperties[i][j] = idx++;
         }
       }
-      pImpl->meshRelation_.properties = VecDH<float>(numProp * idx, 0);
+      pImpl->meshRelation_.properties = Vec<float>(numProp * idx, 0);
     } else {
-      pImpl->meshRelation_.properties =
-          VecDH<float>(numProp * NumPropVert(), 0);
+      pImpl->meshRelation_.properties = Vec<float>(numProp * NumPropVert(), 0);
     }
     thrust::for_each_n(
         thrust::host, countAt(0), NumTri(),
-        UpdateProperties({pImpl->meshRelation_.properties.ptrH(), numProp,
-                          oldProperties.ptrH(), oldNumProp,
-                          pImpl->vertPos_.ptrH(), triProperties.ptrH(),
-                          pImpl->halfedge_.ptrH(), propFunc}));
+        UpdateProperties({pImpl->meshRelation_.properties.data(), numProp,
+                          oldProperties.data(), oldNumProp,
+                          pImpl->vertPos_.data(), triProperties.data(),
+                          pImpl->halfedge_.data(), propFunc}));
   }
 
   pImpl->meshRelation_.numProp = numProp;
@@ -766,5 +777,51 @@ Manifold Manifold::TrimByPlane(glm::vec3 normal, float originOffset) const {
   return *this ^ Halfspace(BoundingBox(), normal, originOffset);
 }
 
-ExecutionParams& ManifoldParams() { return params; }
+ExecutionParams& ManifoldParams() { return manifoldParams; }
+
+/**
+ * Compute the convex hull of a set of points. If the given points are fewer
+ * than 4, or they are all coplanar, an empty Manifold will be returned.
+ *
+ * @param pts A vector of 3-dimensional points over which to compute a convex
+ * hull.
+ */
+Manifold Manifold::Hull(const std::vector<glm::vec3>& pts) {
+  const int numVert = pts.size();
+  if (numVert < 4) return Manifold();
+
+  std::vector<quickhull::Vector3<double>> vertices(numVert);
+  for (int i = 0; i < numVert; i++) {
+    vertices[i] = {pts[i].x, pts[i].y, pts[i].z};
+  }
+
+  quickhull::QuickHull<double> qh;
+  // bools: correct triangle winding, and use original indices
+  auto hull = qh.getConvexHull(vertices, false, true);
+  const auto& triangles = hull.getIndexBuffer();
+  const int numTris = triangles.size() / 3;
+
+  Mesh mesh;
+  mesh.vertPos = pts;
+  mesh.triVerts.reserve(numTris);
+  for (int i = 0; i < numTris; i++) {
+    const int j = i * 3;
+    mesh.triVerts.push_back({triangles[j], triangles[j + 1], triangles[j + 2]});
+  }
+  return Manifold(mesh);
+}
+
+/**
+ * Compute the convex hull of this manifold.
+ */
+Manifold Manifold::Hull() const { return Hull(GetMesh().vertPos); }
+
+/**
+ * Compute the convex hull enveloping a set of manifolds.
+ *
+ * @param manifolds A vector of manifolds over which to compute a convex hull.
+ */
+Manifold Manifold::Hull(const std::vector<Manifold>& manifolds) {
+  return Compose(manifolds).Hull();
+}
 }  // namespace manifold

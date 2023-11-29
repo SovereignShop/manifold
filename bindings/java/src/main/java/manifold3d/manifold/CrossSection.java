@@ -13,7 +13,7 @@ import manifold3d.manifold.CrossSectionVector;
 import manifold3d.pub.SimplePolygon;
 import manifold3d.pub.Polygons;
 
-@Platform(compiler = "cpp17", include = "cross_section.h", linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = {"manifold"})
+@Platform(compiler = "cpp17", include = { "cross_section.h" }, linkpath = { LibraryPaths.CROSS_SECTION_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "cross_section" })
 @Namespace("manifold")
 public class CrossSection extends Pointer {
     static { Loader.load(); }
@@ -25,9 +25,10 @@ public class CrossSection extends Pointer {
     public native @ByRef CrossSection put(@ByRef CrossSection other);
 
     public enum FillRule {
-        NonZero,
-        Positive,
-        Negative
+        EvenOdd,   ///< Only odd numbered sub-regions are filled.
+        NonZero,   ///< Only non-zero sub-regions are filled.
+        Positive,  ///< Only sub-regions with winding counts > 0 are filled.
+        Negative   ///< Only sub-regions with winding counts < 0 are filled.
     };
 
     public enum JoinType {
@@ -36,11 +37,14 @@ public class CrossSection extends Pointer {
         Miter
     };
 
-    public CrossSection(@ByRef SimplePolygon contour, @Cast("manifold::CrossSection::FillRule") int fillrule) { allocate(contour, fillrule); }
-    private native void allocate(@ByRef SimplePolygon contour, @Cast("manifold::CrossSection::FillRule") int fillrule);
+    public CrossSection(@Const @ByRef SimplePolygon contour, @Cast("manifold::CrossSection::FillRule") int fillrule) { allocate(contour, fillrule); }
+    private native void allocate(@Const @ByRef SimplePolygon contour, @Cast("manifold::CrossSection::FillRule") int fillrule);
 
     public CrossSection(@ByRef Polygons contours, @Cast("manifold::CrossSection::FillRule") int fillrule) { allocate(contours, fillrule); }
     private native void allocate(@ByRef Polygons contours, @Cast("manifold::CrossSection::FillRule") int fillrule);
+
+    public CrossSection(@ByRef Rect rect) { allocate(rect); }
+    private native void allocate(@ByRef Rect rect);
 
     @Name("Area") public native double area();
     @Name("NumVert") public native int numVert();
@@ -93,7 +97,6 @@ public class CrossSection extends Pointer {
     @Name("operator^") public native @ByVal CrossSection intersect(@ByRef CrossSection rhs);
     @Name("operator^=") public native @ByVal CrossSection intersectPut(@ByRef CrossSection rhs);
 
-    @Name("RectClip") public native @ByVal CrossSection rectClip(@ByVal Rect rect);
     public static native @ByVal CrossSection Compose(@ByRef CrossSectionVector crossSection);
     @Name("Decompose") public native @ByVal CrossSectionVector decompose();
 

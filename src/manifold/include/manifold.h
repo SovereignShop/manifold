@@ -141,7 +141,8 @@ class Manifold {
                           int nDivisions = 0, float twistDegrees = 0.0f,
                           glm::vec2 scaleTop = glm::vec2(1.0f));
   static Manifold Revolve(const CrossSection& crossSection,
-                          int circularSegments = 0);
+                          int circularSegments = 0,
+                          float revolveDegrees = 360.0f);
   ///@}
 
   /** @name Topological
@@ -233,6 +234,10 @@ class Manifold {
   Manifold TrimByPlane(glm::vec3 normal, float originOffset) const;
   ///@}
 
+  Manifold Hull() const;
+  static Manifold Hull(const std::vector<Manifold>& manifolds);
+  static Manifold Hull(const std::vector<glm::vec3>& pts);
+
   /** @name Testing hooks
    *  These are just for internal testing.
    */
@@ -248,7 +253,6 @@ class Manifold {
   Manifold(std::shared_ptr<CsgNode> pNode_);
   Manifold(std::shared_ptr<Impl> pImpl_);
   static Manifold Invalid();
-
   mutable std::shared_ptr<CsgNode> pNode_;
 
   CsgLeafNode& GetCsgLeafNode() const;

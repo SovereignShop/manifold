@@ -8,7 +8,7 @@ import manifold3d.glm.DoubleVec2;
 import manifold3d.glm.DoubleMat3x2;
 import manifold3d.manifold.CrossSection;
 
-@Platform(compiler = "cpp17", include = { "manifold.h", "cross_section.h" }, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "manifold" })
+@Platform(compiler = "cpp17", include = { "public.h" }, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "manifold" })
 @Namespace("manifold")
 public class Rect extends Pointer {
     static { Loader.load(); }
@@ -44,5 +44,4 @@ public class Rect extends Pointer {
     public native @ByVal Rect multiplyPut(@ByVal DoubleVec2 scale);
 
     public native @ByVal Rect Transform(@ByVal DoubleMat3x2 m);
-    public native @ByVal CrossSection AsCrossSection();
 }

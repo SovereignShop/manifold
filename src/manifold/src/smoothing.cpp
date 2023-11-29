@@ -20,7 +20,7 @@
 namespace {
 using namespace manifold;
 
-__host__ __device__ glm::vec3 OrthogonalTo(glm::vec3 in, glm::vec3 ref) {
+glm::vec3 OrthogonalTo(glm::vec3 in, glm::vec3 ref) {
   in -= glm::dot(in, ref) * ref;
   return in;
 }
@@ -29,7 +29,7 @@ __host__ __device__ glm::vec3 OrthogonalTo(glm::vec3 in, glm::vec3 ref) {
  * The total number of verts if a triangle is subdivided naturally such that
  * each edge has edgeVerts verts along it (edgeVerts >= -1).
  */
-__host__ __device__ int VertsPerTri(int edgeVerts) {
+int VertsPerTri(int edgeVerts) {
   return (edgeVerts * edgeVerts + edgeVerts) / 2;
 }
 
@@ -39,8 +39,8 @@ __host__ __device__ int VertsPerTri(int edgeVerts) {
  * CPU for simplicity for now. Using AtomicCAS on .tri should work for a GPU
  * version if desired.
  */
-void FillRetainedVerts(VecDH<Barycentric>& vertBary,
-                       const VecDH<Halfedge>& halfedge_) {
+void FillRetainedVerts(Vec<Barycentric>& vertBary,
+                       const Vec<Halfedge>& halfedge_) {
   const int numTri = halfedge_.size() / 3;
   for (int tri = 0; tri < numTri; ++tri) {
     for (const int i : {0, 1, 2}) {
@@ -52,9 +52,9 @@ void FillRetainedVerts(VecDH<Barycentric>& vertBary,
 }
 
 struct ReindexHalfedge {
-  int* half2Edge;
+  VecView<int> half2Edge;
 
-  __host__ __device__ void operator()(thrust::tuple<int, TmpEdge> in) {
+  void operator()(thrust::tuple<int, TmpEdge> in) {
     const int edge = thrust::get<0>(in);
     const int halfedge = thrust::get<1>(in).halfedgeIdx;
 
@@ -63,12 +63,12 @@ struct ReindexHalfedge {
 };
 
 struct EdgeVerts {
-  glm::vec3* vertPos;
-  Barycentric* vertBary;
+  VecView<glm::vec3> vertPos;
+  VecView<Barycentric> vertBary;
   const int startIdx;
   const int n;
 
-  __host__ __device__ void operator()(thrust::tuple<int, TmpEdge> in) {
+  void operator()(thrust::tuple<int, TmpEdge> in) {
     int edge = thrust::get<0>(in);
     TmpEdge edgeVerts = thrust::get<1>(in);
 
@@ -91,13 +91,13 @@ struct EdgeVerts {
 };
 
 struct InteriorVerts {
-  glm::vec3* vertPos;
-  Barycentric* vertBary;
+  VecView<glm::vec3> vertPos;
+  VecView<Barycentric> vertBary;
   const int startIdx;
   const int n;
-  const Halfedge* halfedge;
+  VecView<const Halfedge> halfedge;
 
-  __host__ __device__ void operator()(int tri) {
+  void operator()(int tri) {
     const float invTotal = 1.0f / n;
     int pos = startIdx + tri * VertsPerTri(n - 2);
     for (int i = 0; i <= n; ++i) {
@@ -119,21 +119,21 @@ struct InteriorVerts {
 };
 
 struct SplitTris {
-  glm::ivec3* triVerts;
-  const Halfedge* halfedge;
-  const int* half2Edge;
+  VecView<glm::ivec3> triVerts;
+  VecView<Halfedge> halfedge;
+  VecView<const int> half2Edge;
   const int edgeIdx;
   const int triIdx;
   const int n;
 
-  __host__ __device__ int EdgeVert(int i, int inHalfedge) const {
+  int EdgeVert(int i, int inHalfedge) const {
     bool forward = halfedge[inHalfedge].IsForward();
     int edge = forward ? half2Edge[inHalfedge]
                        : half2Edge[halfedge[inHalfedge].pairedHalfedge];
     return edgeIdx + (n - 1) * edge + (forward ? i - 1 : n - 1 - i);
   }
 
-  __host__ __device__ int TriVert(int i, int j, int tri) const {
+  int TriVert(int i, int j, int tri) const {
     --i;
     --j;
     int m = n - 2;
@@ -142,7 +142,7 @@ struct SplitTris {
     return triIdx + vertsPerTri * tri + vertOffset;
   }
 
-  __host__ __device__ int Vert(int i, int j, int tri) const {
+  int Vert(int i, int j, int tri) const {
     bool edge0 = i == 0;
     bool edge1 = j == 0;
     bool edge2 = j == n - i;
@@ -164,7 +164,7 @@ struct SplitTris {
       return TriVert(i, j, tri);
   }
 
-  __host__ __device__ void operator()(int tri) {
+  void operator()(int tri) {
     int pos = n * n * tri;
     for (int i = 0; i < n; ++i) {
       for (int j = 0; j < n - i; ++j) {
@@ -182,13 +182,12 @@ struct SplitTris {
 };
 
 struct SmoothBezier {
-  const glm::vec3* vertPos;
-  const glm::vec3* triNormal;
-  const glm::vec3* vertNormal;
-  const Halfedge* halfedge;
+  VecView<const glm::vec3> vertPos;
+  VecView<const glm::vec3> triNormal;
+  VecView<const glm::vec3> vertNormal;
+  VecView<const Halfedge> halfedge;
 
-  __host__ __device__ void operator()(
-      thrust::tuple<glm::vec4&, Halfedge> inOut) {
+  void operator()(thrust::tuple<glm::vec4&, Halfedge> inOut) {
     glm::vec4& tangent = thrust::get<0>(inOut);
     const Halfedge edge = thrust::get<1>(inOut);
 
@@ -197,10 +196,13 @@ struct SmoothBezier {
     const glm::vec3 edgeNormal =
         (triNormal[edge.face] + triNormal[halfedge[edge.pairedHalfedge].face]) /
         2.0f;
-    glm::vec3 dir = glm::normalize(glm::cross(glm::cross(edgeNormal, edgeVec),
-                                              vertNormal[edge.startVert]));
+    glm::vec3 dir = SafeNormalize(glm::cross(glm::cross(edgeNormal, edgeVec),
+                                             vertNormal[edge.startVert]));
 
-    const float weight = glm::abs(glm::dot(dir, glm::normalize(edgeVec)));
+    float weight = glm::abs(glm::dot(dir, SafeNormalize(edgeVec)));
+    if (weight == 0) {
+      weight = 1;
+    }
     // Quadratic weighted bezier for circular interpolation
     const glm::vec4 bz2 =
         weight *
@@ -213,33 +215,27 @@ struct SmoothBezier {
 };
 
 struct InterpTri {
-  const Halfedge* halfedge;
-  const glm::vec4* halfedgeTangent;
-  const glm::vec3* vertPos;
+  VecView<const Halfedge> halfedge;
+  VecView<const glm::vec4> halfedgeTangent;
+  VecView<const glm::vec3> vertPos;
 
-  __host__ __device__ glm::vec4 Homogeneous(glm::vec4 v) const {
+  glm::vec4 Homogeneous(glm::vec4 v) const {
     v.x *= v.w;
     v.y *= v.w;
     v.z *= v.w;
     return v;
   }
 
-  __host__ __device__ glm::vec4 Homogeneous(glm::vec3 v) const {
-    return glm::vec4(v, 1.0f);
-  }
+  glm::vec4 Homogeneous(glm::vec3 v) const { return glm::vec4(v, 1.0f); }
 
-  __host__ __device__ glm::vec3 HNormalize(glm::vec4 v) const {
-    return glm::vec3(v) / v.w;
-  }
+  glm::vec3 HNormalize(glm::vec4 v) const { return glm::vec3(v) / v.w; }
 
-  __host__ __device__ glm::vec4 Bezier(glm::vec3 point,
-                                       glm::vec4 tangent) const {
+  glm::vec4 Bezier(glm::vec3 point, glm::vec4 tangent) const {
     return Homogeneous(glm::vec4(point, 0) + tangent);
   }
 
-  __host__ __device__ glm::mat2x4 CubicBezier2Linear(glm::vec4 p0, glm::vec4 p1,
-                                                     glm::vec4 p2, glm::vec4 p3,
-                                                     float x) const {
+  glm::mat2x4 CubicBezier2Linear(glm::vec4 p0, glm::vec4 p1, glm::vec4 p2,
+                                 glm::vec4 p3, float x) const {
     glm::mat2x4 out;
     glm::vec4 p12 = glm::mix(p1, p2, x);
     out[0] = glm::mix(glm::mix(p0, p1, x), p12, x);
@@ -247,16 +243,15 @@ struct InterpTri {
     return out;
   }
 
-  __host__ __device__ glm::vec3 BezierPoint(glm::mat2x4 points, float x) const {
+  glm::vec3 BezierPoint(glm::mat2x4 points, float x) const {
     return HNormalize(glm::mix(points[0], points[1], x));
   }
 
-  __host__ __device__ glm::vec3 BezierTangent(glm::mat2x4 points) const {
+  glm::vec3 BezierTangent(glm::mat2x4 points) const {
     return glm::normalize(HNormalize(points[1]) - HNormalize(points[0]));
   }
 
-  __host__ __device__ void operator()(
-      thrust::tuple<glm::vec3&, Barycentric> inOut) {
+  void operator()(thrust::tuple<glm::vec3&, Barycentric> inOut) {
     glm::vec3& pos = thrust::get<0>(inOut);
     const int tri = thrust::get<1>(inOut).tri;
     const glm::vec3 uvw = thrust::get<1>(inOut).uvw;
@@ -333,11 +328,10 @@ void Manifold::Impl::CreateTangents(
 
   for_each_n(autoPolicy(numHalfedge),
              zip(halfedgeTangent_.begin(), halfedge_.cbegin()), numHalfedge,
-             SmoothBezier({vertPos_.cptrD(), faceNormal_.cptrD(),
-                           vertNormal_.cptrD(), halfedge_.cptrD()}));
+             SmoothBezier({vertPos_, faceNormal_, vertNormal_, halfedge_}));
 
   if (!sharpenedEdges.empty()) {
-    const VecDH<TriRef>& triRef = meshRelation_.triRef;
+    const Vec<TriRef>& triRef = meshRelation_.triRef;
 
     // sharpenedEdges are referenced to the input Mesh, but the triangles have
     // been sorted in creating the Manifold, so the indices are converted using
@@ -370,7 +364,7 @@ void Manifold::Impl::CreateTangents(
           {edge.second, edge.first});
     }
 
-    VecDH<glm::vec4>& tangent = halfedgeTangent_;
+    Vec<glm::vec4>& tangent = halfedgeTangent_;
     for (const auto& value : vertTangents) {
       const std::vector<Pair>& vert = value.second;
       // Sharp edges that end are smooth at their terminal vert.
@@ -431,8 +425,8 @@ void Manifold::Impl::CreateTangents(
  * run after the new vertices have moved, which is a likely scenario after
  * refinement (smoothing).
  */
-VecDH<Barycentric> Manifold::Impl::Subdivide(int n) {
-  if (n < 2) return VecDH<Barycentric>();
+Vec<Barycentric> Manifold::Impl::Subdivide(int n) {
+  if (n < 2) return Vec<Barycentric>();
   faceNormal_.resize(0);
   vertNormal_.resize(0);
   const int numVert = NumVert();
@@ -442,28 +436,27 @@ VecDH<Barycentric> Manifold::Impl::Subdivide(int n) {
   const int vertsPerEdge = n - 1;
   const int triVertStart = numVert + numEdge * vertsPerEdge;
   vertPos_.resize(triVertStart + numTri * VertsPerTri(n - 2));
-  VecDH<Barycentric> vertBary(vertPos_.size());
+  Vec<Barycentric> vertBary(vertPos_.size());
   FillRetainedVerts(vertBary, halfedge_);
 
   MeshRelationD oldMeshRelation = std::move(meshRelation_);
   meshRelation_.triRef.resize(n * n * numTri);
   meshRelation_.originalID = oldMeshRelation.originalID;
 
-  VecDH<TmpEdge> edges = CreateTmpEdges(halfedge_);
-  VecDH<int> half2Edge(2 * numEdge);
+  Vec<TmpEdge> edges = CreateTmpEdges(halfedge_);
+  Vec<int> half2Edge(2 * numEdge);
   auto policy = autoPolicy(numEdge);
   for_each_n(policy, zip(countAt(0), edges.begin()), numEdge,
-             ReindexHalfedge({half2Edge.ptrD()}));
+             ReindexHalfedge({half2Edge}));
   for_each_n(policy, zip(countAt(0), edges.begin()), numEdge,
-             EdgeVerts({vertPos_.ptrD(), vertBary.ptrD(), numVert, n}));
+             EdgeVerts({vertPos_, vertBary, numVert, n}));
   for_each_n(policy, countAt(0), numTri,
-             InteriorVerts({vertPos_.ptrD(), vertBary.ptrD(), triVertStart, n,
-                            halfedge_.cptrD()}));
+             InteriorVerts({vertPos_, vertBary, triVertStart, n, halfedge_}));
   // Create sub-triangles
-  VecDH<glm::ivec3> triVerts(n * n * numTri);
-  for_each_n(policy, countAt(0), numTri,
-             SplitTris({triVerts.ptrD(), halfedge_.cptrD(), half2Edge.cptrD(),
-                        numVert, triVertStart, n}));
+  Vec<glm::ivec3> triVerts(n * n * numTri);
+  for_each_n(
+      policy, countAt(0), numTri,
+      SplitTris({triVerts, halfedge_, half2Edge, numVert, triVertStart, n}));
   CreateHalfedges(triVerts);
   // Make original since the subdivided faces are intended to be warped into
   // being non-coplanar, and hence not being related to the original faces.
@@ -483,14 +476,13 @@ VecDH<Barycentric> Manifold::Impl::Subdivide(int n) {
 
 void Manifold::Impl::Refine(int n) {
   Manifold::Impl old = *this;
-  VecDH<Barycentric> vertBary = Subdivide(n);
+  Vec<Barycentric> vertBary = Subdivide(n);
   if (vertBary.size() == 0) return;
 
   if (old.halfedgeTangent_.size() == old.halfedge_.size()) {
     for_each_n(autoPolicy(NumTri()), zip(vertPos_.begin(), vertBary.begin()),
                NumVert(),
-               InterpTri({old.halfedge_.cptrD(), old.halfedgeTangent_.cptrD(),
-                          old.vertPos_.cptrD()}));
+               InterpTri({old.halfedge_, old.halfedgeTangent_, old.vertPos_}));
   }
 
   halfedgeTangent_.resize(0);

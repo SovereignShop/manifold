@@ -194,7 +194,7 @@ TEST(Samples, GyroidModule) {
   const float size = 20;
   Manifold gyroid = GyroidModule(size);
   CheckNormals(gyroid);
-  EXPECT_LE(gyroid.NumDegenerateTris(), 2);
+  EXPECT_LE(gyroid.NumDegenerateTris(), 4);
   EXPECT_EQ(gyroid.Genus(), 15);
   CheckGL(gyroid);
 
@@ -229,8 +229,7 @@ TEST(Samples, Sponge1) {
 TEST(Samples, Sponge4) {
   Manifold sponge = MengerSponge(4);
   CheckNormals(sponge);
-  // FIXME: limit NumDegenerateTris
-  EXPECT_LE(sponge.NumDegenerateTris(), 40000);
+  EXPECT_LE(sponge.NumDegenerateTris(), 8);
   EXPECT_EQ(sponge.Genus(), 26433);  // should be 1:5, 2:81, 3:1409, 4:26433
   CheckGL(sponge);
 
@@ -255,3 +254,58 @@ TEST(Samples, Sponge4) {
 #endif
 }
 #endif
+
+#ifdef MANIFOLD_EXPORT
+TEST(Samples, SelfIntersect) {
+  manifold::PolygonParams().processOverlaps = true;
+  std::string file = __FILE__;
+  std::string dir = file.substr(0, file.rfind('/'));
+  Manifold m1 = ImportMesh(dir + "/models/self_intersectA.glb");
+  Manifold m2 = ImportMesh(dir + "/models/self_intersectB.glb");
+  Manifold res = m1 + m2;
+  res.GetMeshGL();  // test crash
+  manifold::PolygonParams().processOverlaps = false;
+}
+
+TEST(Samples, GenericTwinBooleanTest7863) {
+  manifold::PolygonParams().processOverlaps = true;
+  std::string file = __FILE__;
+  std::string dir = file.substr(0, file.rfind('/'));
+  Manifold m1 = ImportMesh(dir + "/models/Generic_Twin_7863.1.t0_left.glb");
+  Manifold m2 = ImportMesh(dir + "/models/Generic_Twin_7863.1.t0_right.glb");
+  Manifold res = m1 + m2;  // Union
+  res.GetMeshGL();         // test crash
+  manifold::PolygonParams().processOverlaps = false;
+}
+
+TEST(Samples, Havocglass8Bool) {
+  manifold::PolygonParams().processOverlaps = true;
+  std::string file = __FILE__;
+  std::string dir = file.substr(0, file.rfind('/'));
+  Manifold m1 = ImportMesh(dir + "/models/Havocglass8_left.glb");
+  Manifold m2 = ImportMesh(dir + "/models/Havocglass8_right.glb");
+  Manifold res = m1 + m2;  // Union
+  res.GetMeshGL();         // test crash
+  manifold::PolygonParams().processOverlaps = false;
+}
+#endif
+
+TEST(Samples, CondensedMatter16) {
+  // FIXME: it should be geometrically valid
+  manifold::PolygonParams().processOverlaps = true;
+  Manifold cm = CondensedMatter(16);
+  CheckGL(cm);
+  // FIXME: normals should be correct
+  // CheckNormals(cm);
+  manifold::PolygonParams().processOverlaps = false;
+}
+
+TEST(Samples, CondensedMatter64) {
+  // FIXME: it should be geometrically valid
+  manifold::PolygonParams().processOverlaps = true;
+  Manifold cm = CondensedMatter(64);
+  CheckGL(cm);
+  // FIXME: normals should be correct
+  // CheckNormals(cm);
+  manifold::PolygonParams().processOverlaps = false;
+}

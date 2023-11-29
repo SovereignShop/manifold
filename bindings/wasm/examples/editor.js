@@ -26,20 +26,31 @@ let editor = undefined;
 
 // File UI ------------------------------------------------------------
 const fileButton = document.querySelector('#file');
-const currentElement = document.querySelector('#current');
-const arrow = document.querySelector('.uparrow');
-const dropdown = document.querySelector('.dropdown');
+const currentFileElement = document.querySelector('#current');
+const fileArrow = document.querySelector('#file .uparrow');
+const fileDropdown = document.querySelector('#fileDropdown');
+const saveContainer = document.querySelector('#save');
+const saveDropdown = document.querySelector('#saveDropdown');
+const saveArrow = document.querySelector('#save .uparrow');
 
 const hideDropdown = function() {
-  dropdown.classList.remove('show');
-  arrow.classList.remove('down');
+  fileDropdown.classList.remove('show');
+  saveDropdown.classList.remove('show');
+  fileArrow.classList.remove('down');
+  saveArrow.classList.remove('down');
 };
-const toggleDropdown = function(event) {
+const toggleFileDropdown = function(event) {
   event.stopPropagation();
-  dropdown.classList.toggle('show');
-  arrow.classList.toggle('down');
+  fileDropdown.classList.toggle('show');
+  fileArrow.classList.toggle('down');
 };
-fileButton.onclick = toggleDropdown;
+const toggleSaveDropdown = function(event) {
+  event.stopPropagation();
+  saveDropdown.classList.toggle('show');
+  saveArrow.classList.toggle('down');
+};
+fileButton.onclick = toggleFileDropdown;
+saveArrow.parentElement.onclick = toggleSaveDropdown;
 document.body.onclick = hideDropdown;
 
 const prefix = 'ManifoldCAD';
@@ -62,7 +73,7 @@ function nthKey(n) {
 
 function saveCurrent() {
   if (editor) {
-    const currentName = currentElement.textContent;
+    const currentName = currentFileElement.textContent;
     if (!exampleFunctions.get(currentName)) {
       setScript(currentName, editor.getValue());
     }
@@ -77,7 +88,7 @@ let isExample = true;
 function switchTo(scriptName) {
   if (editor) {
     switching = true;
-    currentElement.textContent = scriptName;
+    currentFileElement.textContent = scriptName;
     setScript('currentName', scriptName);
     const code =
         exampleFunctions.get(scriptName) ?? getScript(scriptName) ?? '';
@@ -135,6 +146,7 @@ function addEdit(button) {
     const code = getScript(oldName);
     const form = document.createElement('form');
     const inputElement = document.createElement('input');
+    inputElement.classList.add('name');
     inputElement.value = oldName;
     label.textContent = '';
     button.appendChild(form);
@@ -148,8 +160,8 @@ function addEdit(button) {
       if (!input) return;
       const newName = uniqueName(input);
       label.textContent = newName;
-      if (currentElement.textContent == oldName) {
-        currentElement.textContent = newName;
+      if (currentFileElement.textContent == oldName) {
+        currentFileElement.textContent = newName;
       }
       removeScript(oldName);
       setScript(newName, code);
@@ -182,7 +194,7 @@ function addEdit(button) {
       }, {once: true});
     } else if (performance.now() - lastClick > 500) {
       removeScript(label.textContent);
-      if (currentElement.textContent == label.textContent) {
+      if (currentFileElement.textContent == label.textContent) {
         switchTo('Intro');
       }
       const container = button.parentElement;
@@ -269,10 +281,10 @@ require(['vs/editor/editor.main'], async function() {
 
   for (const [name] of exampleFunctions) {
     const button = createDropdownItem(name);
-    dropdown.appendChild(button.parentElement);
+    fileDropdown.appendChild(button.parentElement);
   }
 
-  let currentName = currentElement.textContent;
+  let currentName = currentFileElement.textContent;
 
   for (let i = 0; i < window.localStorage.length; i++) {
     const key = nthKey(i);
@@ -311,6 +323,51 @@ require(['vs/editor/editor.main'], async function() {
   };
 });
 
+// Animation ------------------------------------------------------------
+const mv = document.querySelector('model-viewer');
+const animationContainer = document.querySelector('#animation');
+const playButton = document.querySelector('#play');
+const scrubber = document.querySelector('#scrubber');
+let paused = false;
+
+mv.addEventListener('load', () => {
+  const hasAnimation = mv.availableAnimations.length > 0;
+  animationContainer.style.display = hasAnimation ? 'flex' : 'none';
+  if (hasAnimation) {
+    play();
+  }
+});
+
+function play() {
+  mv.play();
+  playButton.classList.remove('play');
+  playButton.classList.add('pause');
+  paused = false;
+  scrubber.classList.add('hide');
+}
+
+function pause() {
+  mv.pause();
+  playButton.classList.remove('pause');
+  playButton.classList.add('play');
+  paused = true;
+  scrubber.max = mv.duration;
+  scrubber.value = mv.currentTime;
+  scrubber.classList.remove('hide');
+}
+
+playButton.onclick = function() {
+  if (paused) {
+    play();
+  } else {
+    pause();
+  }
+};
+
+scrubber.oninput = function() {
+  mv.currentTime = scrubber.value;
+};
+
 // Execution ------------------------------------------------------------
 const consoleElement = document.querySelector('#console');
 const oldLog = console.log;
@@ -346,8 +403,10 @@ function finishRun() {
       `Took ${(Math.round((t1 - t0) / 10) / 100).toLocaleString()} seconds`);
 }
 
-const mv = document.querySelector('model-viewer');
-let objectURL = null;
+const output = {
+  glbURL: null,
+  threeMFURL: null
+};
 let manifoldWorker = null;
 
 function createWorker() {
@@ -370,10 +429,16 @@ function createWorker() {
     finishRun();
     runButton.disabled = true;
 
-    URL.revokeObjectURL(objectURL);
-    objectURL = e.data.objectURL;
-    mv.src = objectURL;
-    if (objectURL == null) {
+    if (output.threeMFURL != null) {
+      URL.revokeObjectURL(output.threeMFURL);
+      output.threeMFURL = null;
+    }
+    URL.revokeObjectURL(output.glbURL);
+    output.glbURL = e.data.glbURL;
+    output.threeMFURL = e.data.threeMFURL;
+    threemfButton.disabled = output.threeMFURL == null;
+    mv.src = output.glbURL;
+    if (output.glbURL == null) {
       mv.showPoster();
       poster.textContent = 'Error';
       createWorker();
@@ -411,10 +476,24 @@ runButton.onclick = function() {
   }
 };
 
-const downloadButton = document.querySelector('#download');
-downloadButton.onclick = function() {
-  const link = document.createElement('a');
-  link.download = 'manifold.glb';
-  link.href = objectURL;
-  link.click();
-};
+function clickSave(saveButton, filename, outputName) {
+  const container = saveButton.parentElement;
+  return () => {
+    const oldSave = saveContainer.firstElementChild;
+    if (oldSave !== container) {
+      saveDropdown.insertBefore(oldSave, saveDropdown.firstElementChild);
+      saveContainer.insertBefore(container, saveDropdown);
+      container.appendChild(saveArrow.parentElement);
+    }
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = output[outputName];
+    link.click();
+  };
+}
+
+const glbButton = document.querySelector('#glb');
+glbButton.onclick = clickSave(glbButton, 'manifold.glb', 'glbURL');
+
+const threemfButton = document.querySelector('#threemf');
+threemfButton.onclick = clickSave(threemfButton, 'manifold.3mf', 'threeMFURL');

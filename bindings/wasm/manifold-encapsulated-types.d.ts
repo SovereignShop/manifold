@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Box, FillRule, JoinType, Mat4, Polygons, Properties, Rect, SealedFloat32Array, SealedUint32Array, SimplePolygon, Smoothness, Vec2, Vec3} from './manifold-global-types';
+import {Box, FillRule, JoinType, Mat3, Mat4, Polygons, Properties, Rect, SealedFloat32Array, SealedUint32Array, SimplePolygon, Smoothness, Vec2, Vec3} from './manifold-global-types';
 
 /**
  * Triangulates a set of /epsilon-valid polygons.
@@ -91,7 +91,7 @@ export class CrossSection {
    * @param circularSegments Number of segments along its diameter. Default is
    * calculated by the static Defaults.
    */
-  revolve(circularSegments?: number): Manifold;
+  revolve(circularSegments?: number, revolveDegrees?: number): Manifold;
 
   // Transformations
 
@@ -111,18 +111,15 @@ export class CrossSection {
    * @param v The vector to add to every vertex.
    */
   translate(v: Vec2): CrossSection;
+  translate(x: number, y?: number): CrossSection;
 
   /**
-   * Applies an Euler angle rotation to the cross-section, first about the X
-   * axis, then Y, then Z, in degrees. We use degrees so that we can minimize
-   * rounding error, and eliminate it completely for any multiples of 90
-   * degrees. Additionally, more efficient code paths are used to update the
-   * cross-section when the transforms only rotate by multiples of 90 degrees.
-   * This operation can be chained. Transforms are combined and applied lazily.
+   * Applies a (Z-axis) rotation to the CrossSection, in degrees. This operation
+   * can be chained. Transforms are combined and applied lazily.
    *
-   * @param v [X, Y, Z] rotation in degrees.
+   * @param degrees degrees about the Z-axis to rotate.
    */
-  rotate(v: Vec2): CrossSection;
+  rotate(v: number): CrossSection;
 
   /**
    * Scale this CrossSection in space. This operation can be chained. Transforms
@@ -245,13 +242,17 @@ export class CrossSection {
    */
   static intersection(polygons: (CrossSection|Polygons)[]): CrossSection;
 
+  // Convex Hulls
+
   /**
-   * Compute the intersection between a cross-section and an axis-aligned
-   * rectangle. This operation has much higher performance (O(n) vs
-   * >O(n^3)) than the general purpose intersection algorithm
-   * used for sets of cross-sections.
+   * Compute the convex hull of the contours in this CrossSection.
    */
-  rectClip(rect: Rect): CrossSection;
+  hull(): CrossSection;
+
+  /**
+   * Compute the convex hull of all points in a list of polygons/cross-sections.
+   */
+  static hull(polygons: (CrossSection|Polygons)[]): CrossSection;
 
   // Topological Operations
 
@@ -421,9 +422,11 @@ export class Manifold {
    * @param polygons A set of non-overlapping polygons to revolve.
    * @param circularSegments Number of segments along its diameter. Default is
    * calculated by the static Defaults.
+   * @param revolveDegrees Number of degrees to revolve. Default is 360 degrees.
    */
-  static revolve(polygons: CrossSection|Polygons, circularSegments?: number):
-      Manifold;
+  static revolve(
+      polygons: CrossSection|Polygons, circularSegments?: number,
+      revolveDegrees?: number): Manifold;
 
   // Mesh Conversion
 
@@ -512,6 +515,7 @@ export class Manifold {
    * @param v The vector to add to every vertex.
    */
   translate(v: Vec3): Manifold;
+  translate(x: number, y?: number, z?: number): Manifold;
 
   /**
    * Applies an Euler angle rotation to the manifold, first about the X axis,
@@ -524,6 +528,7 @@ export class Manifold {
    * @param v [X, Y, Z] rotation in degrees.
    */
   rotate(v: Vec3): Manifold;
+  rotate(x: number, y?: number, z?: number): Manifold;
 
   /**
    * Scale this Manifold in space. This operation can be chained. Transforms are
@@ -680,6 +685,19 @@ export class Manifold {
    */
   trimByPlane(normal: Vec3, originOffset: number): Manifold;
 
+  // Convex Hulls
+
+  /**
+   * Compute the convex hull of all points in this Manifold.
+   */
+  hull(): Manifold;
+
+  /**
+   * Compute the convex hull of all points contained within a set of Manifolds
+   * and point vectors.
+   */
+  static hull(points: (Manifold|Vec3)[]): Manifold;
+
   // Topological Operations
 
   /**
@@ -820,19 +838,7 @@ export class Manifold {
   delete(): void;
 }
 
-export class Mesh {
-  constructor(options: {
-    numProp: number,
-    vertProperties: Float32Array,
-    triVerts: Uint32Array,
-    mergeFromVert?: Uint32Array,
-    mergeToVert?: Uint32Array,
-    runIndex?: Uint32Array,
-    runOriginalID?: Uint32Array,
-    runTransform?: Float32Array,
-    faceID?: Uint32Array,
-    halfedgeTangent?: Float32Array
-  });
+export interface MeshOptions {
   numProp: number;
   vertProperties: Float32Array;
   triVerts: Uint32Array;
@@ -843,6 +849,20 @@ export class Mesh {
   runTransform?: Float32Array;
   faceID?: Uint32Array;
   halfedgeTangent?: Float32Array;
+}
+
+export class Mesh {
+  constructor(options: MeshOptions);
+  numProp: number;
+  vertProperties: Float32Array;
+  triVerts: Uint32Array;
+  mergeFromVert: Uint32Array;
+  mergeToVert: Uint32Array;
+  runIndex: Uint32Array;
+  runOriginalID: Uint32Array;
+  runTransform: Float32Array;
+  faceID: Uint32Array;
+  halfedgeTangent: Float32Array;
   get numTri(): number;
   get numVert(): number;
   get numRun(): number;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <glm/glm.hpp>
 #include <vector>
 #include "polygon.h"
