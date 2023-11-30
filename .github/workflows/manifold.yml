@@ -423,8 +423,8 @@ jobs:
           -Dfile=$linux_tbb_jar_file \
           -Dclassifier=linux-TBB-x86_64 \
           -Dfiles=$mac_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_cuda_jar_file,$linux_jar_file \
-          -Dclassifiers=mac-TBB-x86_64,linux-TBB-x86_64,linux-TBB-cuda-x86_64,linux-cuda-x86_64,linux-x86_64 \
-          -Dtypes=jar,jar,jar,jar,jar \
+          -Dclassifiers=mac-TBB-x86_64,linux-TBB-cuda-x86_64,linux-cuda-x86_64,linux-x86_64 \
+          -Dtypes=jar,jar,jar,jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
