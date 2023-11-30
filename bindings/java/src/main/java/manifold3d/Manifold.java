@@ -195,11 +195,8 @@ public class Manifold extends Pointer {
 
     public static native @ByVal Manifold Sphere(float radius, int circularSegments);
     public static native @ByVal Manifold Extrude(@ByRef CrossSection crossSection, float height, int nDivisions, float twistDegrees, @ByRef DoubleVec2 scaleTop);
-    public static @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments) {
-        return MeshUtils.Revolve(crossSection, circularSegments);
-    }
-    public static @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments, float revolveDegrees) {
-        return MeshUtils.Revolve(crossSection, circularSegments, revolveDegrees);
-    }
+
+    public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments);
+    public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments, float revolveDegrees);
     public static native @ByVal Manifold Compose(@ByRef ManifoldVector manifolds);
 }
