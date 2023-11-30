@@ -328,6 +328,16 @@ jobs:
       with:
         name: manifold_java_bindings_mac_${{matrix.parallel_backend}}_${{env.JAVA_PACKAGE_VERSION}}
         path: bindings/java/target/*.jar
+    - name: Upload Surefire Reports
+      if: failure() # This step will run only if the previous steps failed
+      uses: actions/upload-artifact@v2
+      with:
+        name: surefire-reports
+        path: |
+          /Users/runner/work/manifold/manifold/bindings/java/target/surefire-reports
+          /Users/runner/work/manifold/manifold/bindings/java/target/*.dump
+          /Users/runner/work/manifold/manifold/bindings/java/target/*-jvmRun*.dump
+          /Users/runner/work/manifold/manifold/bindings/java/target/*.dumpstream
 
   # build_nix:
   #   timeout-minutes: 30
