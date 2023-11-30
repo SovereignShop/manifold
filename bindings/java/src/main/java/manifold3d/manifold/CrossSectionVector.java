@@ -11,7 +11,11 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = {"manifold.h", "<vector>"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "manifold" })
+@Platform(compiler = "cpp17",
+          include = {"manifold.h", "<vector>"},
+          linkpath = { LibraryPaths.CROSS_SECTION_LIB_DIR,
+                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS },
+          link = { "cross_section" })
 @Name("std::vector<manifold::CrossSection>")
 public class CrossSectionVector extends Pointer implements Iterable<CrossSection> {
     static { Loader.load(); }

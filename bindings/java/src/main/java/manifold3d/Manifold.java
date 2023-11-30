@@ -19,7 +19,6 @@ import manifold3d.manifold.ExportOptions;
 import manifold3d.manifold.CrossSection;
 
 import manifold3d.pub.DoubleMesh;
-import manifold3d.ConvexHull;
 import manifold3d.pub.Box;
 import manifold3d.pub.Properties;
 import manifold3d.pub.SmoothnessVector;
@@ -36,8 +35,7 @@ import org.bytedeco.javacpp.annotation.*;
 @Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"},
           linkpath = { LibraryPaths.MANIFOLD_LIB_DIR,
                        LibraryPaths.CROSS_SECTION_LIB_DIR,
-                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS,
-                       LibraryPaths.QHULL },
+                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS },
           link = { "manifold", "cross_section" })
 @Namespace("manifold")
 public class Manifold extends Pointer {
@@ -50,6 +48,7 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/libClipper2.so.1.2.1", null, "libClipper2", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libcross_section.so", null, "libcross_section", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
+                System.load(Loader.extractResource("/libquickhull.so", null, "libquickhull", ".so").getAbsolutePath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -63,6 +62,8 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/cross_section.dll", null, "cross_section", ".dll").getAbsolutePath());
                 System.out.println("Loading manifold");
                 System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
+                System.out.println("Loading QuickHull");
+                System.load(Loader.extractResource("/quickhull.dll", null, "quickhull", ".dll").getAbsolutePath());
                 System.out.println("Finished Loading.");
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -77,6 +78,8 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/libcross_section.dylib", null, "libcross_section", ".dylib").getAbsolutePath());
                 System.out.println("Loading Manifold");
                 System.load(Loader.extractResource("/libmanifold.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
+                System.out.println("Loading QuickHull");
+                System.load(Loader.extractResource("/libquickhull.dylib", null, "libquickhull", ".dylib").getAbsolutePath());
                 System.out.println("Finished Loading.");
 
             } catch (IOException e) {
@@ -122,13 +125,12 @@ public class Manifold extends Pointer {
     @Name("OriginalID") public native int originalID();
     @Name("AsOriginal") public native @ByVal Manifold asOriginal();
 
-    //@Name("ConvexHull") public native @ByVal Manifold convexHull(@ByRef Manifold other);
+    @Name("Hull") public native @ByVal Manifold convexHull();
+    @Name("Hull") public native @ByVal Manifold convexHull(@ByRef ManifoldVector others);
 
-    public @ByVal Manifold convexHull() {
-        return ConvexHull.ConvexHull(this);
-    }
     public @ByVal Manifold convexHull(@ByRef Manifold other) {
-        return ConvexHull.ConvexHull(this, other);
+        Manifold[] vec  = new Manifold[]{other};
+        return this.convexHull(new ManifoldVector(vec));
     }
 
     //// Modifiers

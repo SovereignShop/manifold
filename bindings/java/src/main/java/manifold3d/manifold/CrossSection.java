@@ -4,7 +4,6 @@ import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
 import manifold3d.LibraryPaths;
-import manifold3d.ConvexHull;
 import manifold3d.glm.DoubleVec2;
 import manifold3d.glm.DoubleMat3x2;
 import manifold3d.manifold.Rect;
@@ -13,7 +12,12 @@ import manifold3d.manifold.CrossSectionVector;
 import manifold3d.pub.SimplePolygon;
 import manifold3d.pub.Polygons;
 
-@Platform(compiler = "cpp17", include = { "cross_section.h" }, linkpath = { LibraryPaths.CROSS_SECTION_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "cross_section" })
+@Platform(compiler = "cpp17",
+          include = { "cross_section.h" },
+          linkpath = { LibraryPaths.CROSS_SECTION_LIB_DIR,
+                       LibraryPaths.MANIFOLD_LIB_DIR,
+                       LibraryPaths.QUICKHULL_LIB_DIR },
+          link = { "cross_section", "quickhull", "manifold" })
 @Namespace("manifold")
 public class CrossSection extends Pointer {
     static { Loader.load(); }
@@ -21,8 +25,11 @@ public class CrossSection extends Pointer {
     public CrossSection() { allocate(); }
     private native void allocate();
 
+    public CrossSection(@Const @ByRef CrossSection other) { allocate(other); }
+    private native void allocate(@Const @ByRef CrossSection other);
+
     @Name("operator=")
-    public native @ByRef CrossSection put(@ByRef CrossSection other);
+    public native @ByRef CrossSection put(@Const @ByRef CrossSection other);
 
     public enum FillRule {
         EvenOdd,   ///< Only odd numbered sub-regions are filled.
@@ -74,20 +81,13 @@ public class CrossSection extends Pointer {
     @Name("Boolean") public native @ByVal CrossSection booleanOp(@ByRef CrossSection second, @Cast("manifold::OpType") int op);
     public static native @ByVal CrossSection BatchBoolean(@ByRef CrossSectionVector sections, @Cast("manifold::OpType") int op);
 
-    public @ByVal CrossSection convexHull() {
-        return ConvexHull.ConvexHull(this);
-    }
+    @Name("Hull") public native @ByVal CrossSection convexHull();
+    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef SimplePolygon pts);
+    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef Polygons pts);
+    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef CrossSectionVector sections);
 
-    public @ByVal CrossSection convexHull(float precision) {
-        return ConvexHull.ConvexHull(this, precision);
-    }
-
-    public @ByVal CrossSection convexHull(@Const @ByRef CrossSection other) {
-       return ConvexHull.ConvexHull(this, other);
-    }
-
-    public @ByVal CrossSection convexHull(@Const @ByRef CrossSection other, float precision) {
-       return ConvexHull.ConvexHull(this, other, precision);
+    public @ByVal CrossSection convexHull(@ByRef CrossSection other) {
+        return this.convexHull(new CrossSectionVector(new CrossSection[]{other}));
     }
 
     @Name("operator+") public native @ByVal CrossSection add(@ByRef CrossSection rhs);
