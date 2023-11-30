@@ -38,7 +38,7 @@ import org.bytedeco.javacpp.annotation.*;
                        LibraryPaths.CROSS_SECTION_LIB_DIR,
                        LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS,
                        LibraryPaths.QHULL },
-          link = {"manifold"})
+          link = { "manifold", "cross_section" })
 @Namespace("manifold")
 public class Manifold extends Pointer {
     static {
