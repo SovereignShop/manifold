@@ -296,6 +296,8 @@ jobs:
     - name: Install Java and Maven
       run: |
         brew install openjdk@17
+        brew link --force --overwrite openjdk@17
+        brew link --overwrite python@3.11
         brew install maven
         echo "JAVA_HOME=$(/usr/libexec/java_home -v 17)" >> $GITHUB_ENV
     - name: Check Java version
