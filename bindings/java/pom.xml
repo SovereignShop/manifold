@@ -61,6 +61,13 @@
                 </includes>
             </resource>
             <resource>
+                <directory>../../build/src/collider</directory>
+                <includes>
+                    <include>libcollider.so</include>
+                    <include>libcollider.dylib</include>
+                </includes>
+            </resource>
+            <resource>
                 <directory>../../build/src/third_party</directory>
                 <includes>
                     <include>libquickhull.so</include>

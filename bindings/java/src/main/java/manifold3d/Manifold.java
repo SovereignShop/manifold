@@ -49,6 +49,7 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/libcross_section.so", null, "libcross_section", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libquickhull.so", null, "libquickhull", ".so").getAbsolutePath());
+                System.load(Loader.extractResource("/libcollider.so", null, "libcollider", ".so").getAbsolutePath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -64,6 +65,8 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
                 System.out.println("Loading QuickHull");
                 System.load(Loader.extractResource("/quickhull.dll", null, "quickhull", ".dll").getAbsolutePath());
+                System.out.println("Loading Collider");
+                System.load(Loader.extractResource("/collider.dll", null, "collider", ".dll").getAbsolutePath());
                 System.out.println("Finished Loading.");
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -80,6 +83,8 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/libmanifold.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
                 System.out.println("Loading QuickHull");
                 System.load(Loader.extractResource("/libquickhull.dylib", null, "libquickhull", ".dylib").getAbsolutePath());
+                System.out.println("Loading Collider");
+                System.load(Loader.extractResource("/libcollider.dylib", null, "libcollider", ".dylib").getAbsolutePath());
                 System.out.println("Finished Loading.");
 
             } catch (IOException e) {
