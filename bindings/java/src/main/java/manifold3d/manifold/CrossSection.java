@@ -82,12 +82,12 @@ public class CrossSection extends Pointer {
     public static native @ByVal CrossSection BatchBoolean(@ByRef CrossSectionVector sections, @Cast("manifold::OpType") int op);
 
     @Name("Hull") public native @ByVal CrossSection convexHull();
-    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef SimplePolygon pts);
-    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef Polygons pts);
-    @Name("Hull") public native @ByVal CrossSection convexHull(@ByRef CrossSectionVector sections);
+    @Name("Hull") public static native @ByVal CrossSection ConvexHull(@ByRef SimplePolygon pts);
+    @Name("Hull") public static native @ByVal CrossSection ConvexHull(@ByRef Polygons pts);
+    @Name("Hull") public static native @ByVal CrossSection ConvexHull(@ByRef CrossSectionVector sections);
 
     public @ByVal CrossSection convexHull(@ByRef CrossSection other) {
-        return this.convexHull(new CrossSectionVector(new CrossSection[]{other}));
+        return CrossSection.ConvexHull(new CrossSectionVector(new CrossSection[]{this, other}));
     }
 
     @Name("operator+") public native @ByVal CrossSection add(@ByRef CrossSection rhs);

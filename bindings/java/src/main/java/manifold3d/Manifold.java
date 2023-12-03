@@ -136,11 +136,11 @@ public class Manifold extends Pointer {
     @Name("AsOriginal") public native @ByVal Manifold asOriginal();
 
     @Name("Hull") public native @ByVal Manifold convexHull();
-    @Name("Hull") public native @ByVal Manifold convexHull(@ByRef ManifoldVector others);
+    @Name("Hull") public static native @ByVal Manifold ConvexHull(@ByRef ManifoldVector manifolds);
 
     public @ByVal Manifold convexHull(@ByRef Manifold other) {
-        Manifold[] vec  = new Manifold[]{other};
-        return this.convexHull(new ManifoldVector(vec));
+        Manifold[] vec  = new Manifold[]{this, other};
+        return Manifold.ConvexHull(new ManifoldVector(vec));
     }
 
     //// Modifiers
