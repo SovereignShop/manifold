@@ -75,7 +75,7 @@
                 </includes>
             </resource>
             <resource>
-                <directory>../../build/src/third_party</directory>
+                <directory>../../build/src/polygon</directory>
                 <includes>
                     <include>libpolygon.so</include>
                     <include>libpolygon.dylib</include>
