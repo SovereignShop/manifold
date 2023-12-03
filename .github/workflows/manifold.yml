@@ -296,9 +296,8 @@ jobs:
     - name: Install Java and Maven
       run: |
         brew install openjdk@17
-        brew link --force --overwrite openjdk@17
-        rm /usr/local/bin/2to3*
-        brew install maven --force
+        export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
+        brew install maven
         echo "JAVA_HOME=$(/usr/libexec/java_home -v 17)" >> $GITHUB_ENV
     - name: Check Java version
       run: java -version
