@@ -297,7 +297,7 @@ jobs:
       run: |
         brew install openjdk@17
         export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
-        brew install maven
+        brew install --ignore-dependencies maven
         echo "JAVA_HOME=$(/usr/libexec/java_home -v 17)" >> $GITHUB_ENV
     - name: Check Java version
       run: java -version
@@ -315,6 +315,7 @@ jobs:
     - name: Build Java package
       shell: bash
       run: |
+        export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
         cd bindings/java
         JAVA_PACKAGE_VERSION=$(cat version.txt)
         echo "JAVA_PACKAGE_VERSION=$JAVA_PACKAGE_VERSION" >> $GITHUB_ENV
