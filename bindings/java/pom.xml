@@ -75,6 +75,13 @@
                 </includes>
             </resource>
             <resource>
+                <directory>../../build/src/third_party</directory>
+                <includes>
+                    <include>libpolygon.so</include>
+                    <include>libpolygon.dylib</include>
+                </includes>
+            </resource>
+            <resource>
                 <directory>../../build/src/cross_section</directory>
                 <includes>
                     <include>libcross_section.so</include>
