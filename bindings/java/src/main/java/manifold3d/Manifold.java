@@ -46,10 +46,10 @@ public class Manifold extends Pointer {
             try {
                 System.load(Loader.extractResource("/libmeshIO.so", null, "libmeshIO", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libClipper2.so.1.2.1", null, "libClipper2", ".so").getAbsolutePath());
+                System.load(Loader.extractResource("/libcollider.so", null, "libcollider", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libcross_section.so", null, "libcross_section", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libquickhull.so", null, "libquickhull", ".so").getAbsolutePath());
-                System.load(Loader.extractResource("/libcollider.so", null, "libcollider", ".so").getAbsolutePath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -59,14 +59,14 @@ public class Manifold extends Pointer {
                 System.load(Loader.extractResource("/meshIO.dll", null, "meshIO", ".dll").getAbsolutePath());
                 System.out.println("Loading Clipper");
                 System.load(Loader.extractResource("/Clipper2.dll", null, "Clipper2", ".dll").getAbsolutePath());
+                System.out.println("Loading Collider");
+                System.load(Loader.extractResource("/collider.dll", null, "collider", ".dll").getAbsolutePath());
                 System.out.println("Loading cross section");
                 System.load(Loader.extractResource("/cross_section.dll", null, "cross_section", ".dll").getAbsolutePath());
                 System.out.println("Loading manifold");
                 System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
                 System.out.println("Loading QuickHull");
                 System.load(Loader.extractResource("/quickhull.dll", null, "quickhull", ".dll").getAbsolutePath());
-                System.out.println("Loading Collider");
-                System.load(Loader.extractResource("/collider.dll", null, "collider", ".dll").getAbsolutePath());
                 System.out.println("Finished Loading.");
             } catch (IOException e) {
                 throw new RuntimeException(e);
