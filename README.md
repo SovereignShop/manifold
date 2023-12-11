@@ -4,18 +4,16 @@
 [![npm version](https://badge.fury.io/js/manifold-3d.svg)](https://badge.fury.io/js/manifold-3d)
 [![twitter](https://img.shields.io/twitter/follow/manifoldcad?style=social&logo=twitter)](https://twitter.com/intent/follow?screen_name=manifoldcad)
 
-This fork Maintains java/JNI bindings to [Manifold](https://github.com/elalish/manifold). It supports nearly all the features, plus extends Manifold with support for polyhedrons and lofts. It has builds for linux, mac and an experimental build for windows.
+This fork Maintains java/JNI bindings to [Manifold](https://github.com/elalish/manifold). It supports nearly all the features, plus extends Manifold with support for polyhedrons and lofts. It has builds for linux and mac (experimental builds for windows have been dropped).
 
 Consider using the [Clojure library](https://github.com/SovereignShop/clj-manifold3d) for a great interactive development environment for solid modeling. 
 
 
 ## Installation
 
-You need to include a classifier for your platform and desired backend. For linux, TBB (Threading Building Blocks) and OMP (OpenMP) parallel backends are available with classifiers `linux-OMP-x86_64` or`linux-TBB-x86_64`. There is a also a build with cuda support enabled at`linux-TBB-cuda-x86_64`.
+You need to include a classifier for your platform and desired backend. For linux, a TBB (Threading Building Blocks) backend is available with classifiers `linux-TBB-x86_64`. There is a also a build with cuda support enabled at`linux-TBB-cuda-x86_64`. The most battle tested version single-threaded implementaiton with cuda support: `linux-cuda-x86_64`.
 
-For mac, only `mac-TBB-x86_64` is available.
-
-Windows is not currently well-supported. There is an experimental jar available in the github build artifacts that should work. It's not available in maven because it is too large (it currently is compiled with the dreaded `CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE` flag).
+For mac, only `mac-TBB-x86_64` and `mac-x86_64` are available.
 
 ## [ManifoldCAD.org](https://manifoldcad.org)
 
