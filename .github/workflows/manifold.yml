@@ -285,8 +285,10 @@ jobs:
       run: |
         brew update
         brew install python@3.12
+        brew install python
     - name: Configure Python 3.12 Environment
       run: |
+        echo 'export PATH="/opt/homebrew/bin:$PATH"' >> $GITHUB_ENV
         echo "PATH=$(brew --prefix python@3.12)/bin:$PATH" >> $GITHUB_ENV
     - name: Install common dependencies
       run: |
