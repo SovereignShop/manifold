@@ -52,6 +52,15 @@ You need to include a classifier for your platform and desired backend. For linu
 
 Similarly for mac, `mac-TBB-x86_64` and `mac-x86_64` classifiers are available.
 
+The Manifold .so libs are included in the bindings jar. You'll also need to have libassimp installed on your system:
+
+``` sh
+;; Ubuntu
+sudo apt install libassimp-dev
+;; Mac
+brew install pkg-config assimp
+```
+
 ## Manifold Frontend Sandboxes
 
 ### [ManifoldCAD.org](https://manifoldcad.org)
