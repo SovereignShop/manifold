@@ -8,6 +8,48 @@ This fork Maintains java/JNI bindings to [Manifold](https://github.com/elalish/m
 
 Consider using the [Clojure library](https://github.com/SovereignShop/clj-manifold3d) for a great interactive development environment for solid modeling. 
 
+## Example
+
+``` java
+package manifold3d;
+
+import manifold3d.Manifold;
+import manifold3d.pub.DoubleMesh;
+import manifold3d.glm.DoubleVec3;
+import manifold3d.manifold.MeshIO;
+import manifold3d.manifold.ExportOptions;
+
+public class ManifoldExample {
+
+    public static void main(String[] args) {
+        // Create basic shapes
+        Manifold sphere = Manifold.Sphere(10.0f, 20);
+        Manifold cube = Manifold.Cube(new DoubleVec3(15.0f, 15.0f, 15.0f), false);
+        Manifold cylinder = Manifold.Cylinder(3, 30.0f, 30.0f, 0, false)
+                .translateX(20).translateY(20).translateZ(-3.0);
+
+        // Perform Boolean operations
+        Manifold diff = cube.subtract(sphere); // Cube minus Sphere
+        Manifold intersection = cube.intersect(sphere); // Cube intersecting with Sphere
+        Manifold union = cube.add(sphere); // Cube union with Sphere
+
+        // Export results with options
+        ExportOptions opts = new ExportOptions();
+        opts.faceted(false); // Smooth surface
+
+        MeshIO.ExportMesh("CubeMinusSphere.stl", diff.getMesh(), opts);
+        MeshIO.ExportMesh("CubeIntersectSphere.glb", intersection.getMesh(), opts);
+        MeshIO.ExportMesh("CubeUnionSphere.obj", union.getMesh(), opts);
+
+        // Create a convex hull combining Cube and Cylinder, then translate the Cube
+        Manifold hull = cylinder.convexHull(cube.translateZ(100.0));
+        MeshIO.ExportMesh("hull.glb", hull.getMesh(), opts);
+    }
+}
+```
+
+`
+
 
 ## Installation
 
