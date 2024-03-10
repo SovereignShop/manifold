@@ -285,12 +285,13 @@ jobs:
       run: |
         brew install pkg-config assimp
         pip install trimesh
-    - name: Install OpenMP
-      if: matrix.parallel_backend == 'OMP'
-      run: brew install libomp
     - name: Install TBB
       if: matrix.parallel_backend == 'TBB'
       run: brew install tbb
+    - name: Remove existing Python installation (if any)
+      run: |
+        brew uninstall --ignore-dependencies python@3.11 python@3.12 python || true
+        brew cleanup
     - name: Install Java and Maven
       run: |
         brew link --overwrite python@3.12
