@@ -281,6 +281,14 @@ jobs:
     runs-on: macos-14
     if: github.event.pull_request.draft == false
     steps:
+    - name: Install Python 3.12
+      run: |
+        brew update
+        brew install python@3.12
+    - name: Configure Python 3.12 Environment
+      run: |
+        echo "PATH=$(brew --prefix python@3.12)/bin:$PATH" >> $GITHUB_ENV
+        python3 -m pip install --upgrade pip
     - name: Install common dependencies
       run: |
         brew install pkg-config assimp
