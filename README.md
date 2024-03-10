@@ -23,7 +23,7 @@ public class ManifoldExample {
 
     public static void main(String[] args) {
         Manifold sphere = Manifold.Sphere(10.0f, 20);
-        Manifold cube = Manifold.Cube(new DoubleVec3(15.0f, 15.0f, 15.0f), false);
+        Manifold cube = Manifold.Cube(new DoubleVec3(15.0, 15.0, 15.0), false);
         Manifold cylinder = Manifold.Cylinder(3, 30.0f, 30.0f, 0, false)
                 .translateX(20).translateY(20).translateZ(-3.0);
 
