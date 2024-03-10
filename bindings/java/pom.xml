@@ -57,7 +57,7 @@
                 <directory>../../build/src/manifold</directory>
                 <includes>
                     <include>libmanifold.so</include>
-                    <include>libmanifold.dylib</include>
+                    <include>libmanifold.2.4.5.dylib</include>
                 </includes>
             </resource>
             <resource>
