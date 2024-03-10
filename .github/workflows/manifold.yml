@@ -94,7 +94,7 @@ jobs:
       if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
-        cd build/bin
+        cd build/test
         ./manifold_test
         cd ../../
         python3 bindings/python/examples/run_all.py
@@ -323,7 +323,7 @@ jobs:
         mvn package -Dos.classifier=mac-${{matrix.parallel_backend}}-x86_64
     - name: Test
       run: |
-        cd build/bin
+        cd build/test
         ./manifold_test
     - name: Upload artifact
       uses: actions/upload-artifact@v3
