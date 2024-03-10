@@ -278,7 +278,7 @@ jobs:
     strategy:
       matrix:
         parallel_backend: [NONE, TBB]
-    runs-on: macos-13
+    runs-on: macos-14
     if: github.event.pull_request.draft == false
     steps:
     - name: Install common dependencies
@@ -288,10 +288,6 @@ jobs:
     - name: Install TBB
       if: matrix.parallel_backend == 'TBB'
       run: brew install tbb
-    - name: Remove existing Python installation (if any)
-      run: |
-        brew uninstall --ignore-dependencies python@3.11 python@3.12 python || true
-        brew cleanup
     - name: Install Java and Maven
       run: |
         brew install openjdk@17
