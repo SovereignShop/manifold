@@ -45,8 +45,6 @@ public class ManifoldExample {
 }
 ```
 
-`
-
 
 ## Installation
 
