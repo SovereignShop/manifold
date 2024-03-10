@@ -48,9 +48,9 @@ public class ManifoldExample {
 
 ## Installation
 
-You need to include a classifier for your platform and desired backend. For linux, a TBB (Threading Building Blocks) backend is available with classifiers `linux-TBB-x86_64`. There is a also a build with cuda support enabled at`linux-TBB-cuda-x86_64`. The most battle tested version single-threaded implementaiton with cuda support: `linux-cuda-x86_64`.
+You need to include a classifier for your platform and desired backend. For linux, a TBB (Threading Building Blocks) backend is available with classifier `linux-TBB-x86_64`. The most battle tested version is the single-threaded implementation: `linux-x86_64` (NOTE: CUDA backends were removed in 1.0.73). 
 
-For mac, only `mac-TBB-x86_64` and `mac-x86_64` are available.
+Similarly for mac, `mac-TBB-x86_64` and `mac-x86_64` classifiers are available.
 
 ## Manifold Frontend Sandboxes
 
