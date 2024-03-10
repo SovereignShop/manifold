@@ -288,7 +288,7 @@ jobs:
         curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
     - name: Configure Python 3.12 Environment
       run: |
-        echo "PATH=$(brew --prefix python@3.12)/bin:$PATH" >> $GITHUB_ENV
+        echo "PATH=$(brew --prefix python@3.12)/bin:/opt/homebrew/opt/python@3.12/libexec/bin:$PATH" >> $GITHUB_ENV
     - name: Install common dependencies
       run: |
         brew install pkg-config assimp
