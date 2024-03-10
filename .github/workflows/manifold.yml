@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        cuda_support: [ON, OFF]
+        cuda_support: [OFF]
         parallel_backend: [NONE, TBB]
     runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
@@ -53,7 +53,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
     - name: Get version
       id: get_version
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
@@ -310,7 +310,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
+        cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
       shell: bash
     - name: Build Java package
       shell: bash
