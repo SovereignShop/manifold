@@ -26,6 +26,18 @@
 #include "par.h"
 #include "vec.h"
 
+#if __has_include(<tracy/Tracy.hpp>)
+#include <tracy/Tracy.hpp>
+#else
+#define FrameMarkStart(x)
+#define FrameMarkEnd(x)
+// putting ZoneScoped in a function will instrument the function execution when
+// TRACY_ENABLE is set, which allows the profiler to record more accurate
+// timing.
+#define ZoneScoped
+#define ZoneScopedN(name)
+#endif
+
 namespace manifold {
 
 /** @defgroup Private
@@ -33,40 +45,7 @@ namespace manifold {
  *  @{
  */
 #ifdef MANIFOLD_DEBUG
-inline void MemUsage() {
-#if THRUST_DEVICE_SYSTEM == THRUST_DEVICE_SYSTEM_CUDA
-  size_t free, total;
-  cudaMemGetInfo(&free, &total);
-  std::cout << "Using " << (total - free) / 1048575 << " Mb ("
-            << (100 * (total - free)) / total << " %)" << std::endl;
-#endif
-}
-
 struct Timer {
-#if THRUST_DEVICE_SYSTEM == THRUST_DEVICE_SYSTEM_CUDA
-  cudaEvent_t start, end;
-
-  Timer() {
-    cudaEventCreate(&start);
-    cudaEventCreate(&end);
-  }
-
-  ~Timer() {
-    cudaEventDestroy(start);
-    cudaEventDestroy(end);
-  }
-
-  void Start() { cudaEventRecord(start, 0); }
-
-  void Stop() { cudaEventRecord(end, 0); }
-
-  float Elapsed() {
-    cudaEventSynchronize(end);
-    float elapsed;
-    cudaEventElapsedTime(&elapsed, start, end);
-    return elapsed;
-  }
-#else
   std::chrono::high_resolution_clock::time_point start, end;
 
   void Start() { start = std::chrono::high_resolution_clock::now(); }
@@ -77,7 +56,6 @@ struct Timer {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
         .count();
   }
-#endif
   void Print(std::string message) {
     std::cout << "----------- " << std::round(Elapsed()) << " ms for "
               << message << std::endl;
@@ -112,31 +90,19 @@ inline int Prev3(int i) {
 
 template <typename T>
 T AtomicAdd(T& target, T add) {
-#ifdef __CUDA_ARCH__
-  // required for synchronization
-  __threadfence();
-  return atomicAdd(&target, add);
-#else
   std::atomic<T>& tar = reinterpret_cast<std::atomic<T>&>(target);
   T old_val = tar.load();
   while (!tar.compare_exchange_weak(old_val, old_val + add,
                                     std::memory_order_seq_cst))
     ;
   return old_val;
-#endif
 }
 
 template <>
 inline int AtomicAdd(int& target, int add) {
-#ifdef __CUDA_ARCH__
-  // required for synchronization
-  __threadfence();
-  return atomicAdd(&target, add);
-#else
   std::atomic<int>& tar = reinterpret_cast<std::atomic<int>&>(target);
   int old_val = tar.fetch_add(add, std::memory_order_seq_cst);
   return old_val;
-#endif
 }
 
 // Copied from

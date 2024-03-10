@@ -190,7 +190,7 @@ struct CheckHalfedges {
   VecView<const Halfedge> halfedges;
   VecView<const glm::vec3> vertPos;
 
-  bool operator()(int edge) {
+  bool operator()(size_t edge) {
     const Halfedge halfedge = halfedges[edge];
     if (halfedge.startVert == -1 || halfedge.endVert == -1) return true;
     if (halfedge.pairedHalfedge == -1) return false;
@@ -275,7 +275,7 @@ bool Manifold::Impl::IsManifold() const {
   if (halfedge_.size() == 0) return true;
   auto policy = autoPolicy(halfedge_.size());
 
-  return all_of(policy, countAt(0), countAt(halfedge_.size()),
+  return all_of(policy, countAt(0_z), countAt(halfedge_.size()),
                 CheckHalfedges({halfedge_, vertPos_}));
 }
 
@@ -316,6 +316,7 @@ int Manifold::Impl::NumDegenerateTris() const {
 }
 
 Properties Manifold::Impl::GetProperties() const {
+  ZoneScoped;
   if (IsEmpty()) return {0, 0};
   // Kahan summation
   float area = 0;
@@ -339,6 +340,7 @@ Properties Manifold::Impl::GetProperties() const {
 }
 
 void Manifold::Impl::CalculateCurvature(int gaussianIdx, int meanIdx) {
+  ZoneScoped;
   if (IsEmpty()) return;
   if (gaussianIdx < 0 && meanIdx < 0) return;
   Vec<float> vertMeanCurvature(NumVert(), 0);
@@ -370,7 +372,6 @@ void Manifold::Impl::CalculateCurvature(int gaussianIdx, int meanIdx) {
                         numProp, gaussianIdx, meanIdx}));
 
   CreateFaces();
-  SimplifyTopology();
   Finish();
 }
 

@@ -24,7 +24,7 @@ def fractal(holes, hole, w, position, depth, maxDepth):
 
 
 def posColors(pos, _):
-    return [1 - p / 2 for p in pos] + [1.0]
+    return [-p + 0.5 for p in pos] + [1.0]
 
 
 def run(n=1):
@@ -38,4 +38,6 @@ def run(n=1):
     result -= hole.rotate([90, 0, 0])
     result -= hole.rotate([0, 90, 0])
 
-    return result.trim_by_plane([1, 1, 1], 0).set_properties(4, posColors).scale(100)
+    return (
+        result.trim_by_plane([1, 1, 1], 0).set_properties(4, posColors).scale([100] * 3)
+    )

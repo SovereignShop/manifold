@@ -14,6 +14,7 @@
 
 import ManifoldWorker from './worker?worker';
 
+const CODE_START = '<code>';
 // Loaded globally by examples.js
 const exampleFunctions = self.examples.functionBodies;
 
@@ -23,6 +24,28 @@ if (navigator.serviceWorker) {
 }
 
 let editor = undefined;
+
+// Edit UI ------------------------------------------------------------
+
+const undoButton = document.querySelector('#undo');
+const redoButton = document.querySelector('#redo');
+const formatButton = document.querySelector('#format');
+const shareButton = document.querySelector('#share');
+
+undoButton.onclick = () => editor.trigger('ignored', 'undo');
+redoButton.onclick = () => editor.trigger('ignored', 'redo');
+formatButton.onclick = () =>
+    editor.trigger('ignored', 'editor.action.formatDocument');
+shareButton.onclick = () => {
+  const url = new URL(window.location.toString());
+  url.hash =
+      '#' +
+      encodeURIComponent(
+          currentFileElement.textContent + CODE_START + editor.getValue());
+  navigator.clipboard.writeText(url.toString());
+  console.log('Shareable link copied to clipboard!');
+  console.log('Consider shortening this URL using tinyURL.com');
+};
 
 // File UI ------------------------------------------------------------
 const fileButton = document.querySelector('#file');
@@ -90,9 +113,10 @@ function switchTo(scriptName) {
     switching = true;
     currentFileElement.textContent = scriptName;
     setScript('currentName', scriptName);
-    const code =
-        exampleFunctions.get(scriptName) ?? getScript(scriptName) ?? '';
     isExample = exampleFunctions.get(scriptName) != null;
+    const code = isExample ? exampleFunctions.get(scriptName).substring(1) :
+                             getScript(scriptName) ?? '';
+    window.location.hash = '#' + scriptName;
     editor.setValue(code);
   }
 }
@@ -204,16 +228,16 @@ function addEdit(button) {
 }
 
 const newButton = document.querySelector('#new');
-function newItem(code) {
-  const name = uniqueName('New Script');
+function newItem(code, scriptName = undefined) {
+  const name = uniqueName(scriptName ?? 'New Script');
   setScript(name, code);
   const nextButton = createDropdownItem(name);
   newButton.insertAdjacentElement('afterend', nextButton.parentElement);
   addEdit(nextButton);
-  nextButton.click();
+  return {button: nextButton, name};
 };
 newButton.onclick = function() {
-  newItem('');
+  newItem('').button.click();
 };
 
 const runButton = document.querySelector('#compile');
@@ -226,7 +250,7 @@ function initializeRun() {
   if (autoExecute) {
     runButton.click();
   } else {
-    poster.textContent = 'Auto-run disabled due to prior failure';
+    poster.textContent = 'Auto-run disabled';
   }
 }
 
@@ -299,7 +323,24 @@ require(['vs/editor/editor.main'], async function() {
       addEdit(button);
     }
   }
-  switchTo(currentName);
+
+  if (window.location.hash.length > 0) {
+    const fragment = decodeURIComponent(window.location.hash.substring(1));
+    const codeIdx = fragment.indexOf(CODE_START);
+    if (codeIdx != -1) {
+      autoExecute = true;
+      const name = fragment.substring(0, codeIdx);
+      switchTo(
+          newItem(fragment.substring(codeIdx + CODE_START.length), name).name);
+    } else {
+      if (fragment != currentName) {
+        autoExecute = true;
+      }
+      switchTo(fragment);
+    }
+  } else {
+    switchTo(currentName);
+  }
 
   if (manifoldInitialized) {
     initializeRun();
@@ -309,11 +350,12 @@ require(['vs/editor/editor.main'], async function() {
     runButton.disabled = false;
     if (switching) {
       switching = false;
+      editor.setScrollTop(0);
       return;
     }
     if (isExample) {
       const cursor = editor.getPosition();
-      newItem(editor.getValue());
+      newItem(editor.getValue()).button.click();
       editor.setPosition(cursor);
     }
   });

@@ -55,7 +55,7 @@ TEST(Boolean, MeshGLRoundTrip) {
   const Manifold result2(inGL);
 
   ASSERT_LT(result2.OriginalID(), 0);
-  ExpectMeshes(result2, {{18, 32}});
+  ExpectMeshes(result2, {{16, 28}});
   RelatedGL(result2, {original});
 
   const MeshGL outGL = result2.GetMeshGL();
@@ -391,6 +391,16 @@ TEST(Boolean, Sphere) {
   EXPECT_EQ(result.NumDegenerateTris(), 0);
 
   RelatedGL(result, {sphereGL});
+  result = result.Refine(4);
+  RelatedGL(result, {sphereGL});
+
+#ifdef MANIFOLD_EXPORT
+  ExportOptions opt;
+  opt.mat.roughness = 1;
+  opt.mat.colorChannels = glm::ivec4(3, 4, 5, -1);
+  if (options.exportModels)
+    ExportMesh("sphereUnion.glb", result.GetMeshGL(), opt);
+#endif
 }
 
 TEST(Boolean, MeshRelation) {
@@ -404,6 +414,7 @@ TEST(Boolean, MeshRelation) {
   EXPECT_TRUE(gyroid.MatchesTriNormals());
   EXPECT_LE(gyroid.NumDegenerateTris(), 0);
   Manifold result = gyroid + gyroid2;
+  result = result.RefineToLength(0.1);
 
 #ifdef MANIFOLD_EXPORT
   ExportOptions opt;
@@ -657,6 +668,23 @@ TEST(Boolean, TreeTransforms) {
   auto b = (Manifold::Cube({1, 1, 1}) + Manifold::Cube({1, 1, 1}));
 
   EXPECT_FLOAT_EQ((a + b).GetProperties().volume, 2);
+}
+
+TEST(Boolean, Spiral) {
+  ManifoldParams().deterministic = true;
+  const int d = 2;
+  std::function<Manifold(const int, const float, const float)> spiral =
+      [&](const int rec, const float r, const float add) {
+        const float rot = 360.0f / (glm::pi<float>() * r * 2) * d;
+        const float rNext = r + add / 360 * rot;
+        const Manifold cube =
+            Manifold::Cube(glm::vec3(1), true).Translate({0, r, 0});
+        if (rec > 0)
+          return spiral(rec - 1, rNext, add).Rotate(0, 0, rot) + cube;
+        return cube;
+      };
+  const Manifold result = spiral(120, 25, 2);
+  EXPECT_EQ(result.Genus(), -120);
 }
 
 TEST(Boolean, Sweep) {

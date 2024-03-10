@@ -182,9 +182,29 @@ TEST(Samples, Frame) {
 TEST(Samples, Bracelet) {
   Manifold bracelet = StretchyBracelet();
   CheckNormals(bracelet);
-  EXPECT_LE(bracelet.NumDegenerateTris(), 22);
+  EXPECT_EQ(bracelet.NumDegenerateTris(), 0);
   EXPECT_EQ(bracelet.Genus(), 1);
   CheckGL(bracelet);
+
+  CrossSection projection = bracelet.Project();
+  Rect rect = projection.Bounds();
+  Box box = bracelet.BoundingBox();
+  EXPECT_EQ(rect.min.x, box.min.x);
+  EXPECT_EQ(rect.min.y, box.min.y);
+  EXPECT_EQ(rect.max.x, box.max.x);
+  EXPECT_EQ(rect.max.y, box.max.y);
+  EXPECT_NEAR(projection.Area(), 649, 1);
+  EXPECT_EQ(projection.NumContour(), 2);
+  Manifold extrusion = Manifold::Extrude(projection, 1);
+  EXPECT_EQ(extrusion.NumDegenerateTris(), 0);
+  EXPECT_EQ(extrusion.Genus(), 1);
+
+  CrossSection slice = bracelet.Slice();
+  EXPECT_EQ(slice.NumContour(), 2);
+  EXPECT_NEAR(slice.Area(), 230.6, 0.1);
+  extrusion = Manifold::Extrude(slice, 1);
+  EXPECT_EQ(extrusion.Genus(), 1);
+
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels) ExportMesh("bracelet.glb", bracelet.GetMesh(), {});
 #endif
@@ -202,9 +222,16 @@ TEST(Samples, GyroidModule) {
   const float precision = gyroid.Precision();
   EXPECT_NEAR(bounds.min.z, 0, precision);
   EXPECT_NEAR(bounds.max.z, size * glm::sqrt(2.0f), precision);
+
+  CrossSection slice = gyroid.Slice(5);
+  EXPECT_EQ(slice.NumContour(), 4);
+  EXPECT_NEAR(slice.Area(), 121.9, 0.1);
+  Manifold extrusion = Manifold::Extrude(slice, 1);
+  EXPECT_EQ(extrusion.Genus(), -3);
+
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels)
-    ExportMesh("gyroidModule.gltf", gyroid.GetMesh(), {});
+    ExportMesh("gyroidModule.glb", gyroid.GetMesh(), {});
 #endif
 }
 
@@ -237,6 +264,18 @@ TEST(Samples, Sponge4) {
   EXPECT_EQ(cutSponge.first.Genus(), 13394);
   EXPECT_EQ(cutSponge.second.Genus(), 13394);
 
+  CrossSection projection = cutSponge.first.Project();
+  Rect rect = projection.Bounds();
+  Box box = cutSponge.first.BoundingBox();
+  EXPECT_EQ(rect.min.x, box.min.x);
+  EXPECT_EQ(rect.min.y, box.min.y);
+  EXPECT_EQ(rect.max.x, box.max.x);
+  EXPECT_EQ(rect.max.y, box.max.y);
+  EXPECT_NEAR(projection.Area(), 0.535, 0.001);
+  Manifold extrusion = Manifold::Extrude(projection, 1);
+  EXPECT_EQ(extrusion.NumDegenerateTris(), 0);
+  EXPECT_EQ(extrusion.Genus(), 502);
+
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels) {
     ExportMesh("mengerHalf.glb", cutSponge.first.GetMesh(), {});
@@ -267,6 +306,15 @@ TEST(Samples, SelfIntersect) {
   manifold::PolygonParams().processOverlaps = false;
 }
 
+TEST(Samples, GenericTwinBooleanTest7081) {
+  std::string file = __FILE__;
+  std::string dir = file.substr(0, file.rfind('/'));
+  Manifold m1 = ImportMesh(dir + "/models/Generic_Twin_7081.1.t0_left.glb");
+  Manifold m2 = ImportMesh(dir + "/models/Generic_Twin_7081.1.t0_right.glb");
+  Manifold res = m1 + m2;  // Union
+  res.GetMeshGL();         // test crash
+}
+
 TEST(Samples, GenericTwinBooleanTest7863) {
   manifold::PolygonParams().processOverlaps = true;
   std::string file = __FILE__;
@@ -288,6 +336,17 @@ TEST(Samples, Havocglass8Bool) {
   res.GetMeshGL();         // test crash
   manifold::PolygonParams().processOverlaps = false;
 }
+
+TEST(Samples, CraycloudBool) {
+  std::string file = __FILE__;
+  std::string dir = file.substr(0, file.rfind('/'));
+  Manifold m1 = ImportMesh(dir + "/models/Cray_left.glb");
+  Manifold m2 = ImportMesh(dir + "/models/Cray_right.glb");
+  Manifold res = m1 - m2;
+  EXPECT_EQ(res.Status(), Manifold::Error::NoError);
+  EXPECT_TRUE(res.IsEmpty());
+}
+
 #endif
 
 TEST(Samples, CondensedMatter16) {

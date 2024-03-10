@@ -17,7 +17,7 @@
 #define TBB_PREVIEW_CONCURRENT_ORDERED_CONTAINERS 1
 #include <tbb/concurrent_map.h>
 #endif
-#include <map>
+#include <unordered_set>
 
 #include "impl.h"
 #include "polygon.h"
@@ -39,6 +39,7 @@ using AddTriangle = std::function<void(int, glm::ivec3, glm::vec3, TriRef)>;
  */
 void Manifold::Impl::Face2Tri(const Vec<int>& faceEdge,
                               const Vec<TriRef>& halfedgeRef) {
+  ZoneScoped;
   Vec<glm::ivec3> triVerts;
   Vec<glm::vec3> triNormal;
   Vec<TriRef>& triRef = meshRelation_.triRef;
@@ -126,19 +127,21 @@ void Manifold::Impl::Face2Tri(const Vec<int>& faceEdge,
   auto generalTriangulation = [&](int face) {
     const glm::vec3 normal = faceNormal_[face];
     const glm::mat3x2 projection = GetAxisAlignedProjection(normal);
-    const PolygonsIdx polys = Face2Polygons(face, projection, faceEdge);
+    const PolygonsIdx polys =
+        Face2Polygons(halfedge_.cbegin() + faceEdge[face],
+                      halfedge_.cbegin() + faceEdge[face + 1], projection);
     return TriangulateIdx(polys, precision_);
   };
 #if MANIFOLD_PAR == 'T' && __has_include(<tbb/tbb.h>)
   tbb::task_group group;
   // map from face to triangle
   tbb::concurrent_unordered_map<int, std::vector<glm::ivec3>> results;
-  Vec<int> triCount(faceEdge.size());
+  Vec<size_t> triCount(faceEdge.size());
   triCount.back() = 0;
   // precompute number of triangles per face, and launch async tasks to
   // triangulate complex faces
-  for_each(autoPolicy(faceEdge.size()), countAt(0),
-           countAt(faceEdge.size() - 1), [&](int face) {
+  for_each(autoPolicy(faceEdge.size()), countAt(0_z),
+           countAt(faceEdge.size() - 1), [&](size_t face) {
              triCount[face] = faceEdge[face + 1] - faceEdge[face] - 2;
              ASSERT(triCount[face] >= 1, topologyErr,
                     "face has less than three edges.");
@@ -152,13 +155,15 @@ void Manifold::Impl::Face2Tri(const Vec<int>& faceEdge,
   group.wait();
   // prefix sum computation (assign unique index to each face) and preallocation
   exclusive_scan(autoPolicy(triCount.size()), triCount.begin(), triCount.end(),
-                 triCount.begin(), 0);
+                 triCount.begin(), 0_z);
+  if (triCount.back() >= std::numeric_limits<int>::max())
+    throw std::out_of_range("too many triangles");
   triVerts.resize(triCount.back());
   triNormal.resize(triCount.back());
   triRef.resize(triCount.back());
 
   auto processFace2 = std::bind(
-      processFace, [&](int face) { return std::move(results[face]); },
+      processFace, [&](size_t face) { return std::move(results[face]); },
       [&](int face, glm::ivec3 tri, glm::vec3 normal, TriRef r) {
         triVerts[triCount[face]] = tri;
         triNormal[triCount[face]] = normal;
@@ -167,7 +172,7 @@ void Manifold::Impl::Face2Tri(const Vec<int>& faceEdge,
       },
       std::placeholders::_1);
   // set triangles in parallel
-  for_each(autoPolicy(faceEdge.size()), countAt(0),
+  for_each(autoPolicy(faceEdge.size()), countAt(0_z),
            countAt(faceEdge.size() - 1), processFace2);
 #else
   triVerts.reserve(faceEdge.size());
@@ -191,20 +196,16 @@ void Manifold::Impl::Face2Tri(const Vec<int>& faceEdge,
 }
 
 /**
- * For the input face index, return a set of 2D polygons formed by the input
- * projection of the vertices.
+ * Returns a set of 2D polygons formed by the input projection of the vertices
+ * of the list of Halfedges, which must be an even-manifold, meaning each vert
+ * must be referenced the same number of times as a startVert and endVert.
  */
-PolygonsIdx Manifold::Impl::Face2Polygons(int face, glm::mat3x2 projection,
-                                          const Vec<int>& faceEdge) const {
-  const int firstEdge = faceEdge[face];
-  const int lastEdge = faceEdge[face + 1];
-
-  std::map<int, int> vert_edge;
-  for (int edge = firstEdge; edge < lastEdge; ++edge) {
-    const bool inserted =
-        vert_edge.emplace(std::make_pair(halfedge_[edge].startVert, edge))
-            .second;
-    ASSERT(inserted, topologyErr, "face has duplicate vertices.");
+PolygonsIdx Manifold::Impl::Face2Polygons(VecView<Halfedge>::IterC start,
+                                          VecView<Halfedge>::IterC end,
+                                          glm::mat3x2 projection) const {
+  std::multimap<int, int> vert_edge;
+  for (auto edge = start; edge != end; ++edge) {
+    vert_edge.emplace(std::make_pair(edge->startVert, edge - start));
   }
 
   PolygonsIdx polys;
@@ -217,13 +218,104 @@ PolygonsIdx Manifold::Impl::Face2Polygons(int face, glm::mat3x2 projection,
       thisEdge = startEdge;
       polys.push_back({});
     }
-    int vert = halfedge_[thisEdge].startVert;
+    int vert = (start + thisEdge)->startVert;
     polys.back().push_back({projection * vertPos_[vert], vert});
-    const auto result = vert_edge.find(halfedge_[thisEdge].endVert);
+    const auto result = vert_edge.find((start + thisEdge)->endVert);
     ASSERT(result != vert_edge.end(), topologyErr, "non-manifold edge");
     thisEdge = result->second;
     vert_edge.erase(result);
   }
   return polys;
+}
+
+CrossSection Manifold::Impl::Slice(float height) const {
+  Box plane = bBox_;
+  plane.min.z = plane.max.z = height;
+  Vec<Box> query;
+  query.push_back(plane);
+  const SparseIndices collisions =
+      collider_.Collisions<false, false>(query.cview());
+
+  std::unordered_set<int> tris;
+  for (int i = 0; i < collisions.size(); ++i) {
+    const int tri = collisions.Get(i, 1);
+    float min = std::numeric_limits<float>::infinity();
+    float max = -std::numeric_limits<float>::infinity();
+    for (const int j : {0, 1, 2}) {
+      const float z = vertPos_[halfedge_[3 * tri + j].startVert].z;
+      min = glm::min(min, z);
+      max = glm::max(max, z);
+    }
+
+    if (min <= height && max > height) {
+      tris.insert(tri);
+    }
+  }
+
+  Polygons polys;
+  while (!tris.empty()) {
+    const int startTri = *tris.begin();
+    SimplePolygon poly;
+
+    int k = 0;
+    for (const int j : {0, 1, 2}) {
+      if (vertPos_[halfedge_[3 * startTri + j].startVert].z > height &&
+          vertPos_[halfedge_[3 * startTri + Next3(j)].startVert].z <= height) {
+        k = Next3(j);
+        break;
+      }
+    }
+
+    int tri = startTri;
+    do {
+      tris.erase(tris.find(tri));
+      if (vertPos_[halfedge_[3 * tri + k].endVert].z <= height) {
+        k = Next3(k);
+      }
+
+      Halfedge up = halfedge_[3 * tri + k];
+      const glm::vec3 below = vertPos_[up.startVert];
+      const glm::vec3 above = vertPos_[up.endVert];
+      const float a = (height - below.z) / (above.z - below.z);
+      poly.push_back(glm::vec2(glm::mix(below, above, a)));
+
+      const int pair = up.pairedHalfedge;
+      tri = pair / 3;
+      k = Next3(pair % 3);
+    } while (tri != startTri);
+
+    polys.push_back(poly);
+  }
+
+  return CrossSection(polys);
+}
+
+CrossSection Manifold::Impl::Project() const {
+  const glm::mat3x2 projection = GetAxisAlignedProjection({0, 0, 1});
+  auto policy = autoPolicy(halfedge_.size());
+
+  Vec<Halfedge> cusps(NumEdge());
+  cusps.resize(copy_if<decltype(cusps.begin())>(
+                   policy, halfedge_.cbegin(), halfedge_.cend(), cusps.begin(),
+                   [&](Halfedge edge) {
+                     return faceNormal_[edge.face].z >= 0 &&
+                            faceNormal_[halfedge_[edge.pairedHalfedge].face].z <
+                                0;
+                   }) -
+               cusps.begin());
+
+  PolygonsIdx polysIndexed =
+      Face2Polygons(cusps.cbegin(), cusps.cend(), projection);
+
+  Polygons polys;
+  for (const auto& poly : polysIndexed) {
+    SimplePolygon simple;
+    for (const PolyVert& polyVert : poly) {
+      simple.push_back(polyVert.pos);
+    }
+    polys.push_back(simple);
+  }
+
+  return CrossSection(polys).Simplify(precision_);
 }
 }  // namespace manifold

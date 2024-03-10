@@ -22,6 +22,7 @@
 #include "hashtable.h"
 #include "mesh_fixes.h"
 #include "par.h"
+#include "svd.h"
 
 namespace {
 using namespace manifold;
@@ -320,6 +321,7 @@ int GetLabels(std::vector<int>& components,
 
 void DedupePropVerts(manifold::Vec<glm::ivec3>& triProp,
                      const Vec<thrust::pair<int, int>>& vert2vert) {
+  ZoneScoped;
   std::vector<int> vertLabels;
   const int numLabels = GetLabels(vertLabels, vert2vert, vert2vert.size());
 
@@ -348,6 +350,11 @@ Manifold::Impl::Impl(const MeshGL& meshGL,
   mesh.precision = meshGL.precision;
   const int numVert = meshGL.NumVert();
   const int numTri = meshGL.NumTri();
+
+  if (meshGL.numProp > 3 &&
+      static_cast<size_t>(numVert) * static_cast<size_t>(meshGL.numProp - 3) >=
+          std::numeric_limits<int>::max())
+    throw std::out_of_range("mesh too large");
 
   if (meshGL.numProp < 3) {
     MarkFailure(Error::MissingPositionProperties);
@@ -379,7 +386,7 @@ Manifold::Impl::Impl(const MeshGL& meshGL,
 
   std::vector<int> prop2vert(numVert);
   std::iota(prop2vert.begin(), prop2vert.end(), 0);
-  for (int i = 0; i < meshGL.mergeFromVert.size(); ++i) {
+  for (size_t i = 0; i < meshGL.mergeFromVert.size(); ++i) {
     const int from = meshGL.mergeFromVert[i];
     const int to = meshGL.mergeToVert[i];
     if (from >= numVert || to >= numVert) {
@@ -388,8 +395,8 @@ Manifold::Impl::Impl(const MeshGL& meshGL,
     }
     prop2vert[from] = to;
   }
-  for (int i = 0; i < numTri; ++i) {
-    for (const int j : {0, 1, 2}) {
+  for (size_t i = 0; i < numTri; ++i) {
+    for (const size_t j : {0, 1, 2}) {
       const int vert = meshGL.triVerts[3 * i + j];
       if (vert < 0 || vert >= numVert) {
         MarkFailure(Error::VertexOutOfBounds);
@@ -403,8 +410,8 @@ Manifold::Impl::Impl(const MeshGL& meshGL,
 
   if (meshGL.numProp > 3) {
     relation.triProperties.resize(numTri);
-    for (int i = 0; i < numTri; ++i) {
-      for (const int j : {0, 1, 2}) {
+    for (size_t i = 0; i < numTri; ++i) {
+      for (const size_t j : {0, 1, 2}) {
         relation.triProperties[i][j] = meshGL.triVerts[3 * i + j];
       }
     }
@@ -478,11 +485,13 @@ Manifold::Impl::Impl(const Mesh& mesh, const MeshRelationD& relation,
                      const std::vector<float>& propertyTolerance,
                      bool hasFaceIDs)
     : vertPos_(mesh.vertPos), halfedgeTangent_(mesh.halfedgeTangent) {
+  if (mesh.triVerts.size() >= std::numeric_limits<int>::max())
+    throw std::out_of_range("mesh too large");
   meshRelation_ = {relation.originalID, relation.numProp, relation.properties,
                    relation.meshIDtransform};
 
   Vec<glm::ivec3> triVerts;
-  for (int i = 0; i < mesh.triVerts.size(); ++i) {
+  for (size_t i = 0; i < mesh.triVerts.size(); ++i) {
     const glm::ivec3 tri = mesh.triVerts[i];
     // Remove topological degenerates
     if (tri[0] != tri[1] && tri[1] != tri[2] && tri[2] != tri[0]) {
@@ -532,7 +541,7 @@ Manifold::Impl::Impl(const Mesh& mesh, const MeshRelationD& relation,
  * Create either a unit tetrahedron, cube or octahedron. The cube is in the
  * first octant, while the others are symmetric about the origin.
  */
-Manifold::Impl::Impl(Shape shape) {
+Manifold::Impl::Impl(Shape shape, const glm::mat4x3 m) {
   std::vector<glm::vec3> vertPos;
   std::vector<glm::ivec3> triVerts;
   switch (shape) {
@@ -545,19 +554,19 @@ Manifold::Impl::Impl(Shape shape) {
       break;
     case Shape::Cube:
       vertPos = {{0.0f, 0.0f, 0.0f},  //
-                 {1.0f, 0.0f, 0.0f},  //
-                 {1.0f, 1.0f, 0.0f},  //
-                 {0.0f, 1.0f, 0.0f},  //
                  {0.0f, 0.0f, 1.0f},  //
+                 {0.0f, 1.0f, 0.0f},  //
+                 {0.0f, 1.0f, 1.0f},  //
+                 {1.0f, 0.0f, 0.0f},  //
                  {1.0f, 0.0f, 1.0f},  //
-                 {1.0f, 1.0f, 1.0f},  //
-                 {0.0f, 1.0f, 1.0f}};
-      triVerts = {{0, 2, 1}, {0, 3, 2},  //
-                  {4, 5, 6}, {4, 6, 7},  //
-                  {0, 1, 5}, {0, 5, 4},  //
-                  {1, 2, 6}, {1, 6, 5},  //
-                  {2, 3, 7}, {2, 7, 6},  //
-                  {3, 0, 4}, {3, 4, 7}};
+                 {1.0f, 1.0f, 0.0f},  //
+                 {1.0f, 1.0f, 1.0f}};
+      triVerts = {{1, 0, 4}, {2, 4, 0},  //
+                  {1, 3, 0}, {3, 1, 5},  //
+                  {3, 2, 0}, {3, 7, 2},  //
+                  {5, 4, 6}, {5, 1, 4},  //
+                  {6, 4, 2}, {7, 6, 2},  //
+                  {7, 3, 5}, {7, 5, 6}};
       break;
     case Shape::Octahedron:
       vertPos = {{1.0f, 0.0f, 0.0f},   //
@@ -573,6 +582,7 @@ Manifold::Impl::Impl(Shape shape) {
       break;
   }
   vertPos_ = vertPos;
+  for (auto& v : vertPos_) v = m * glm::vec4(v, 1.0f);
   CreateHalfedges(triVerts);
   Finish();
   meshRelation_.originalID = ReserveIDs(1);
@@ -581,6 +591,7 @@ Manifold::Impl::Impl(Shape shape) {
 }
 
 void Manifold::Impl::RemoveUnreferencedVerts(Vec<glm::ivec3>& triVerts) {
+  ZoneScoped;
   Vec<int> vertOld2New(NumVert() + 1, 0);
   auto policy = autoPolicy(NumVert());
   for_each(policy, triVerts.cbegin(), triVerts.cend(),
@@ -613,6 +624,7 @@ void Manifold::Impl::InitializeOriginal() {
 }
 
 void Manifold::Impl::CreateFaces(const std::vector<float>& propertyTolerance) {
+  ZoneScoped;
   Vec<float> propertyToleranceD =
       propertyTolerance.empty() ? Vec<float>(meshRelation_.numProp, kTolerance)
                                 : propertyTolerance;
@@ -661,6 +673,7 @@ void Manifold::Impl::CreateFaces(const std::vector<float>& propertyTolerance) {
  * Create the halfedge_ data structure from an input triVerts array like Mesh.
  */
 void Manifold::Impl::CreateHalfedges(const Vec<glm::ivec3>& triVerts) {
+  ZoneScoped;
   const int numTri = triVerts.size();
   const int numHalfedge = 3 * numTri;
   // drop the old value first to avoid copy
@@ -714,7 +727,14 @@ void Manifold::Impl::MarkFailure(Error status) {
 }
 
 void Manifold::Impl::Warp(std::function<void(glm::vec3&)> warpFunc) {
-  thrust::for_each_n(thrust::host, vertPos_.begin(), NumVert(), warpFunc);
+  WarpBatch([&warpFunc](VecView<glm::vec3> vecs) {
+    thrust::for_each(thrust::host, vecs.begin(), vecs.end(), warpFunc);
+  });
+}
+
+void Manifold::Impl::WarpBatch(
+    std::function<void(VecView<glm::vec3>)> warpFunc) {
+  warpFunc(vertPos_.view());
   CalculateBBox();
   if (!IsFinite()) {
     MarkFailure(Error::NonFiniteVertex);
@@ -725,11 +745,11 @@ void Manifold::Impl::Warp(std::function<void(glm::vec3&)> warpFunc) {
   CalculateNormals();
   SetPrecision();
   CreateFaces();
-  SimplifyTopology();
   Finish();
 }
 
 Manifold::Impl Manifold::Impl::Transform(const glm::mat4x3& transform_) const {
+  ZoneScoped;
   if (transform_ == glm::mat4x3(1.0f)) return *this;
   auto policy = autoPolicy(NumVert());
   Impl result;
@@ -776,11 +796,8 @@ Manifold::Impl Manifold::Impl::Transform(const glm::mat4x3& transform_) const {
   if (!result.collider_.Transform(transform_)) result.Update();
 
   result.CalculateBBox();
-  float scale = 0;
-  for (int i : {0, 1, 2})
-    scale =
-        glm::max(scale, transform_[0][i] + transform_[1][i] + transform_[2][i]);
-  result.precision_ *= scale;
+  // Scale the precision by the norm of the 3x3 portion of the transform.
+  result.precision_ *= SpectralNorm(glm::mat3(transform_));
   // Maximum of inherited precision loss and translational precision loss.
   result.SetPrecision(result.precision_);
   return result;
@@ -807,6 +824,7 @@ void Manifold::Impl::SetPrecision(float minPrecision) {
  * recalculation.
  */
 void Manifold::Impl::CalculateNormals() {
+  ZoneScoped;
   vertNormal_.resize(NumVert());
   auto policy = autoPolicy(NumTri());
   fill(policy, vertNormal_.begin(), vertNormal_.end(), glm::vec3(0));
@@ -849,6 +867,7 @@ void Manifold::Impl::IncrementMeshIDs() {
  */
 SparseIndices Manifold::Impl::EdgeCollisions(const Impl& Q,
                                              bool inverted) const {
+  ZoneScoped;
   Vec<TmpEdge> edges = CreateTmpEdges(Q.halfedge_);
   const int numEdge = edges.size();
   Vec<Box> QedgeBB(numEdge);
@@ -863,10 +882,10 @@ SparseIndices Manifold::Impl::EdgeCollisions(const Impl& Q,
     q1p2 = collider_.Collisions<false, false>(QedgeBB.cview());
 
   if (inverted)
-    for_each(policy, countAt(0), countAt(q1p2.size()),
+    for_each(policy, countAt(0_z), countAt(q1p2.size()),
              ReindexEdge<true>({edges, q1p2}));
   else
-    for_each(policy, countAt(0), countAt(q1p2.size()),
+    for_each(policy, countAt(0_z), countAt(q1p2.size()),
              ReindexEdge<false>({edges, q1p2}));
   return q1p2;
 }
@@ -877,6 +896,7 @@ SparseIndices Manifold::Impl::EdgeCollisions(const Impl& Q,
  */
 SparseIndices Manifold::Impl::VertexCollisionsZ(
     VecView<const glm::vec3> vertsIn, bool inverted) const {
+  ZoneScoped;
   if (inverted)
     return collider_.Collisions<false, true>(vertsIn);
   else

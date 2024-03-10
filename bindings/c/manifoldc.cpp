@@ -38,8 +38,6 @@ namespace {
 ManifoldMeshGL *level_set(void *mem, float (*sdf)(float, float, float),
                           ManifoldBox *bounds, float edge_length, float level,
                           bool seq) {
-  // typing with std::function rather than auto compiles when CUDA is on,
-  // passing it into GPU (and crashing) is avoided dynamically in `sdf.h`
   std::function<float(glm::vec3)> fun = [sdf](glm::vec3 v) {
     return (sdf(v.x, v.y, v.z));
   };
@@ -202,6 +200,17 @@ ManifoldManifold *manifold_trim_by_plane(void *mem, ManifoldManifold *m,
   return to_c(new (mem) Manifold(trimmed));
 }
 
+ManifoldCrossSection *manifold_slice(void *mem, ManifoldManifold *m,
+                                     float height) {
+  auto poly = from_c(m)->Slice(height);
+  return to_c(new (mem) CrossSection(poly));
+}
+
+ManifoldCrossSection *manifold_project(void *mem, ManifoldManifold *m) {
+  auto poly = from_c(m)->Project();
+  return to_c(new (mem) CrossSection(poly));
+}
+
 ManifoldManifold *manifold_hull(void *mem, ManifoldManifold *m) {
   auto hulled = from_c(m)->Hull();
   return to_c(new (mem) Manifold(hulled));
@@ -293,6 +302,12 @@ ManifoldMeshGL *manifold_level_set_seq_context(
 
 ManifoldManifold *manifold_refine(void *mem, ManifoldManifold *m, int refine) {
   auto refined = from_c(m)->Refine(refine);
+  return to_c(new (mem) Manifold(refined));
+}
+
+ManifoldManifold *manifold_refine_to_length(void *mem, ManifoldManifold *m,
+                                            float length) {
+  auto refined = from_c(m)->RefineToLength(length);
   return to_c(new (mem) Manifold(refined));
 }
 

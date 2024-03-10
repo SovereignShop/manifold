@@ -61,44 +61,16 @@
                 </includes>
             </resource>
             <resource>
-                <directory>../../build/src/collider</directory>
-                <includes>
-                    <include>libcollider.so</include>
-                    <include>libcollider.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/third_party</directory>
-                <includes>
-                    <include>libquickhull.so</include>
-                    <include>libquickhull.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/polygon</directory>
-                <includes>
-                    <include>libpolygon.so</include>
-                    <include>libpolygon.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/cross_section</directory>
-                <includes>
-                    <include>libcross_section.so</include>
-                    <include>libcross_section.dylib</include>
-                </includes>
-            </resource>
-            <resource>
                 <directory>../../build/src/manifold/Release</directory>
                 <includes>
                     <include>manifold.dll</include>
                 </includes>
             </resource>
             <resource>
-                <directory>../../build/src/third_party/clipper2/CPP</directory>
+                <directory>../../build/_deps/clipper2-build/</directory>
                 <includes>
-                    <include>libClipper2.so.1.2.1</include>
-                    <include>libClipper2.1.2.1.dylib</include>
+                    <include>libClipper2.so</include>
+                    <include>libClipper2.dylib</include>
                 </includes>
             </resource>
             <resource>

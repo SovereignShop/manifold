@@ -146,55 +146,63 @@ void decompose_hole(const C2::PolyTreeD* outline,
   }
 }
 
+void flatten(const C2::PolyTreeD* tree, C2::PathsD& polys, int i) {
+  auto n_outlines = tree->Count();
+  if (i < n_outlines) {
+    auto outline = tree->Child(i);
+    flatten(outline, polys, 0);
+    polys.push_back(outline->Polygon());
+    if (i < n_outlines - 1) {
+      flatten(tree, polys, i + 1);
+    }
+  }
+}
+
 bool V2Lesser(glm::vec2 a, glm::vec2 b) {
   if (a.x == b.x) return a.y < b.y;
   return a.x < b.x;
 }
 
-double Cross(glm::vec2 a, glm::vec2 b) { return a.x * b.y - a.y * b.x; }
-
-double SquaredDistance(glm::vec2 a, glm::vec2 b) {
-  auto d = a - b;
-  return glm::dot(d, d);
-}
-
-bool IsCw(glm::vec2 a, glm::vec2 b, glm::vec2 c) {
-  double lhs = Cross(a - c, b - c);
-  double rhs = 1e-18 * SquaredDistance(a, c) * SquaredDistance(b, c);
-  return lhs * std::abs(lhs) <= rhs;
-}
-
-void HullBacktrack(const SimplePolygon& pts, const int idx,
-                   std::vector<int>& keep, const int hold) {
-  const int stop = keep.size() - hold;
-  int i = 0;
-  while (i < stop && !IsCw(pts[idx], pts[keep[keep.size() - 1]],
-                           pts[keep[keep.size() - 2]])) {
-    keep.pop_back();
-    i++;
+void HullBacktrack(const glm::vec2& pt, std::vector<glm::vec2>& stack) {
+  auto sz = stack.size();
+  while (sz >= 2 && CCW(stack[sz - 2], stack[sz - 1], pt, 0.0f) <= 0.0f) {
+    stack.pop_back();
+    sz = stack.size();
   }
 }
 
 // Based on method described here:
 // https://www.hackerearth.com/practice/math/geometry/line-sweep-technique/tutorial/
+// Changed to follow:
+// https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
+// This is the same algorithm (Andrew, also called Montone Chain).
 C2::PathD HullImpl(SimplePolygon& pts) {
   int len = pts.size();
   if (len < 3) return C2::PathD();  // not enough points to create a polygon
   std::sort(pts.begin(), pts.end(), V2Lesser);
-  auto keep = std::vector<int>{0, 1};
-  for (int i = 2; i < len; i++) {
-    HullBacktrack(pts, i, keep, 1);
-    keep.push_back(i);
+
+  auto lower = std::vector<glm::vec2>{};
+  for (int i = 0; i < len; i++) {
+    HullBacktrack(pts[i], lower);
+    lower.push_back(pts[i]);
   }
-  int nLower = keep.size();
-  for (int i = 0; i < len - 1; i++) {
-    int idx = len - 2 - i;
-    HullBacktrack(pts, idx, keep, nLower);
-    if (idx > 0) keep.push_back(idx);
+  auto upper = std::vector<glm::vec2>{};
+  for (int i = len - 1; i >= 0; i--) {
+    HullBacktrack(pts[i], upper);
+    upper.push_back(pts[i]);
   }
-  auto path = C2::PathD(keep.size());
-  for (int i = 0; i < keep.size(); i++) {
-    path[i] = v2_to_pd(pts[keep[i]]);
+
+  upper.pop_back();
+  lower.pop_back();
+
+  auto path = C2::PathD(lower.size() + upper.size());
+  for (int i = 0; i < lower.size(); i++) {
+    path[i] = v2_to_pd(lower[i]);
+  }
+  auto llen = lower.size();
+  int sz = upper.size();  // "fix" -Waggressive-loop-optimizations warning.
+  for (int i = 0; i < sz; i++) {
+    path[i + llen] = v2_to_pd(upper[i]);
   }
   return path;
 }
@@ -555,21 +563,42 @@ CrossSection CrossSection::Transform(const glm::mat3x2& m) const {
  */
 CrossSection CrossSection::Warp(
     std::function<void(glm::vec2&)> warpFunc) const {
-  auto paths = GetPaths();
-  auto warped = C2::PathsD();
-  warped.reserve(paths->paths_.size());
-  for (auto path : paths->paths_) {
-    auto sz = path.size();
-    auto s = C2::PathD(sz);
-    for (int i = 0; i < sz; ++i) {
-      auto v = v2_of_pd(path[i]);
-      warpFunc(v);
-      s[i] = v2_to_pd(v);
+  return WarpBatch([&warpFunc](VecView<glm::vec2> vecs) {
+    for (glm::vec2& p : vecs) {
+      warpFunc(p);
     }
-    warped.push_back(s);
+  });
+}
+
+/**
+ * Same as CrossSection::Warp but calls warpFunc with
+ * a VecView which is roughly equivalent to std::span
+ * pointing to all vec2 elements to be modified in-place
+ *
+ * @param warpFunc A function that modifies multiple vertex positions.
+ */
+CrossSection CrossSection::WarpBatch(
+    std::function<void(VecView<glm::vec2>)> warpFunc) const {
+  std::vector<glm::vec2> tmp_verts;
+  C2::PathsD paths = GetPaths()->paths_;  // deep copy
+  for (C2::PathD const& path : paths) {
+    for (C2::PointD const& p : path) {
+      tmp_verts.push_back(v2_of_pd(p));
+    }
   }
+
+  warpFunc(VecView<glm::vec2>(tmp_verts.data(), tmp_verts.size()));
+
+  auto cursor = tmp_verts.begin();
+  for (C2::PathD& path : paths) {
+    for (C2::PointD& p : path) {
+      p = v2_to_pd(*cursor);
+      ++cursor;
+    }
+  }
+
   return CrossSection(
-      shared_paths(C2::Union(warped, C2::FillRule::Positive, precision_)));
+      shared_paths(C2::Union(paths, C2::FillRule::Positive, precision_)));
 }
 
 /**
@@ -585,7 +614,28 @@ CrossSection CrossSection::Warp(
  * offseting operations are to be performed, which would compound the issue.
  */
 CrossSection CrossSection::Simplify(double epsilon) const {
-  auto ps = SimplifyPaths(GetPaths()->paths_, epsilon, false);
+  C2::PolyTreeD tree;
+  C2::BooleanOp(C2::ClipType::Union, C2::FillRule::Positive, GetPaths()->paths_,
+                C2::PathsD(), tree, precision_);
+
+  C2::PathsD polys;
+  flatten(&tree, polys, 0);
+
+  // Filter out contours less than epsilon wide.
+  C2::PathsD filtered;
+  for (C2::PathD poly : polys) {
+    auto area = C2::Area(poly);
+    Rect box;
+    for (auto vert : poly) {
+      box.Union(glm::vec2(vert.x, vert.y));
+    }
+    glm::vec2 size = box.Size();
+    if (glm::abs(area) > glm::max(size.x, size.y) * epsilon) {
+      filtered.push_back(poly);
+    }
+  }
+
+  auto ps = SimplifyPaths(filtered, epsilon, true);
   return CrossSection(shared_paths(ps));
 }
 

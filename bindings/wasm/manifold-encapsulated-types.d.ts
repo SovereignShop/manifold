@@ -572,6 +572,18 @@ export class Manifold {
   refine(n: number): Manifold;
 
   /**
+   * Increase the density of the mesh by splitting each edge into pieces of
+   * roughly the input length. Interior verts are added to keep the rest of the
+   * triangulation edges also of roughly the same length. If halfedgeTangents
+   * are present (e.g. from the Smooth() constructor), the new vertices will be
+   * moved to the interpolated surface according to their barycentric
+   * coordinates.
+   *
+   * @param length The length that edges will be broken down to.
+   */
+  refineToLength(length: number): Manifold;
+
+  /**
    * Create a new copy of this manifold with updated vertex properties by
    * supplying a function that takes the existing position and properties as
    * input. You may specify any number of output properties, allowing creation
@@ -684,6 +696,22 @@ export class Manifold {
    *     direction of the normal vector.
    */
   trimByPlane(normal: Vec3, originOffset: number): Manifold;
+
+  /**
+   * Returns the cross section of this object parallel to the X-Y plane at the
+   * specified height. Using a height equal to the bottom
+   * of the bounding box will return the bottom faces, while using a height
+   * equal to the top of the bounding box will return empty.
+   *
+   * @param height Z-level of slice.
+   */
+  slice(height: number): CrossSection;
+
+  /**
+   * Returns a cross section representing the projected outline of this object
+   * onto the X-Y plane.
+   */
+  project(): CrossSection;
 
   // Convex Hulls
 

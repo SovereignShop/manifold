@@ -155,6 +155,7 @@ Manifold::Manifold(const Mesh& mesh) {
  * saving or other operations outside of the context of this library.
  */
 Mesh Manifold::GetMesh() const {
+  ZoneScoped;
   const Impl& impl = *GetCsgLeafNode().GetImpl();
 
   Mesh result;
@@ -189,6 +190,7 @@ Mesh Manifold::GetMesh() const {
  * MeshGLs must use the same channels for their normals.
  */
 MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
+  ZoneScoped;
   const Impl& impl = *GetCsgLeafNode().GetImpl();
 
   const int numProp = NumProp();
@@ -289,7 +291,7 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
   // Duplicate verts with different props
   std::vector<int> vert2idx(impl.NumVert(), -1);
   std::vector<std::vector<glm::ivec2>> vertPropPair(impl.NumVert());
-  out.vertProperties.reserve(numVert * out.numProp);
+  out.vertProperties.reserve(numVert * static_cast<size_t>(out.numProp));
 
   for (int run = 0; run < out.runOriginalID.size(); ++run) {
     for (int tri = out.runIndex[run] / 3; tri < out.runIndex[run + 1] / 3;
@@ -484,7 +486,7 @@ int Manifold::NumOverlaps(const Manifold& other) const {
 
   overlaps = other.GetCsgLeafNode().GetImpl()->EdgeCollisions(
       *GetCsgLeafNode().GetImpl());
-  return num_overlaps += overlaps.size();
+  return num_overlaps + overlaps.size();
 }
 
 /**
@@ -568,6 +570,20 @@ Manifold Manifold::Warp(std::function<void(glm::vec3&)> warpFunc) const {
 }
 
 /**
+ * Same as Manifold::Warp but calls warpFunc with with
+ * a VecView which is roughly equivalent to std::span
+ * pointing to all vec3 elements to be modified in-place
+ *
+ * @param warpFunc A function that modifies multiple vertex positions.
+ */
+Manifold Manifold::WarpBatch(
+    std::function<void(VecView<glm::vec3>)> warpFunc) const {
+  auto pImpl = std::make_shared<Impl>(*GetCsgLeafNode().GetImpl());
+  pImpl->WarpBatch(warpFunc);
+  return Manifold(std::make_shared<CsgLeafNode>(pImpl));
+}
+
+/**
  * Create a new copy of this manifold with updated vertex properties by
  * supplying a function that takes the existing position and properties as
  * input. You may specify any number of output properties, allowing creation and
@@ -613,7 +629,6 @@ Manifold Manifold::SetProperties(
 
   pImpl->meshRelation_.numProp = numProp;
   pImpl->CreateFaces();
-  pImpl->SimplifyTopology();
   pImpl->Finish();
   return Manifold(std::make_shared<CsgLeafNode>(pImpl));
 }
@@ -652,7 +667,26 @@ Manifold Manifold::CalculateCurvature(int gaussianIdx, int meanIdx) const {
  */
 Manifold Manifold::Refine(int n) const {
   auto pImpl = std::make_shared<Impl>(*GetCsgLeafNode().GetImpl());
-  pImpl->Refine(n);
+  if (n > 1) {
+    pImpl->Refine([n](glm::vec3 edge) { return n - 1; });
+  }
+  return Manifold(std::make_shared<CsgLeafNode>(pImpl));
+}
+
+/**
+ * Increase the density of the mesh by splitting each edge into pieces of
+ * roughly the input length. Interior verts are added to keep the rest of the
+ * triangulation edges also of roughly the same length. If halfedgeTangents are
+ * present (e.g. from the Smooth() constructor), the new vertices will be moved
+ * to the interpolated surface according to their barycentric coordinates.
+ *
+ * @param length The length that edges will be broken down to.
+ */
+Manifold Manifold::RefineToLength(float length) const {
+  length = glm::abs(length);
+  auto pImpl = std::make_shared<Impl>(*GetCsgLeafNode().GetImpl());
+  pImpl->Refine(
+      [length](glm::vec3 edge) { return glm::length(edge) / length; });
   return Manifold(std::make_shared<CsgLeafNode>(pImpl));
 }
 
@@ -674,6 +708,10 @@ Manifold Manifold::Boolean(const Manifold& second, OpType op) const {
   return Manifold(pNode_->Boolean(second.pNode_, op));
 }
 
+/**
+ * Perform the given boolean operation on a list of Manifolds. In case of
+ * Subtract, all Manifolds in the tail are differenced from the head.
+ */
 Manifold Manifold::BatchBoolean(const std::vector<Manifold>& manifolds,
                                 OpType op) {
   if (manifolds.size() == 0)
@@ -777,6 +815,24 @@ Manifold Manifold::TrimByPlane(glm::vec3 normal, float originOffset) const {
   return *this ^ Halfspace(BoundingBox(), normal, originOffset);
 }
 
+/**
+ * Returns the cross section of this object parallel to the X-Y plane at the
+ * specified Z height, defaulting to zero. Using a height equal to the bottom of
+ * the bounding box will return the bottom faces, while using a height equal to
+ * the top of the bounding box will return empty.
+ */
+CrossSection Manifold::Slice(float height) const {
+  return GetCsgLeafNode().GetImpl()->Slice(height);
+}
+
+/**
+ * Returns a cross section representing the projected outline of this object
+ * onto the X-Y plane.
+ */
+CrossSection Manifold::Project() const {
+  return GetCsgLeafNode().GetImpl()->Project();
+}
+
 ExecutionParams& ManifoldParams() { return manifoldParams; }
 
 /**
@@ -787,6 +843,7 @@ ExecutionParams& ManifoldParams() { return manifoldParams; }
  * hull.
  */
 Manifold Manifold::Hull(const std::vector<glm::vec3>& pts) {
+  ZoneScoped;
   const int numVert = pts.size();
   if (numVert < 4) return Manifold();
 

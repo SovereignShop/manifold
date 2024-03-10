@@ -153,10 +153,9 @@ Manifold Manifold::Cube(glm::vec3 size, bool center) {
       glm::length(size) == 0.) {
     return Invalid();
   }
-  auto cube = Manifold(std::make_shared<Impl>(Impl::Shape::Cube));
-  cube = cube.Scale(size);
-  if (center) cube = cube.Translate(-size / 2.0f);
-  return cube.AsOriginal();
+  glm::mat4x3 m =
+      glm::translate(center ? (-size / 2.0f) : glm::vec3(0)) * glm::scale(size);
+  return Manifold(std::make_shared<Impl>(Manifold::Impl::Shape::Cube, m));
 }
 
 /**
@@ -208,7 +207,7 @@ Manifold Manifold::Sphere(float radius, int circularSegments) {
   int n = circularSegments > 0 ? (circularSegments + 3) / 4
                                : Quality::GetCircularSegments(radius) / 4;
   auto pImpl_ = std::make_shared<Impl>(Impl::Shape::Octahedron);
-  pImpl_->Subdivide(n);
+  pImpl_->Subdivide([n](glm::vec3 edge) { return n - 1; });
   for_each_n(autoPolicy(pImpl_->NumVert()), pImpl_->vertPos_.begin(),
              pImpl_->NumVert(), ToSphere({radius}));
   pImpl_->Finish();
@@ -233,11 +232,13 @@ Manifold Manifold::Sphere(float radius, int circularSegments) {
  * bottom, interpolated linearly for the divisions in between.
  * @param scaleTop Amount to scale the top (independently in X and Y). If the
  * scale is {0, 0}, a pure cone is formed with only a single vertex at the top.
+ * Note that scale is applied after twist.
  * Default {1, 1}.
  */
 Manifold Manifold::Extrude(const CrossSection& crossSection, float height,
                            int nDivisions, float twistDegrees,
                            glm::vec2 scaleTop) {
+  ZoneScoped;
   auto polygons = crossSection.ToPolygons();
   if (polygons.size() == 0 || height <= 0.0f) {
     return Invalid();
@@ -267,9 +268,9 @@ Manifold Manifold::Extrude(const CrossSection& crossSection, float height,
   for (int i = 1; i < nDivisions + 1; ++i) {
     float alpha = i / float(nDivisions);
     float phi = alpha * twistDegrees;
-    glm::mat2 transform(cosd(phi), sind(phi), -sind(phi), cosd(phi));
     glm::vec2 scale = glm::mix(glm::vec2(1.0f), scaleTop, alpha);
-    transform = transform * glm::mat2(scale.x, 0.0f, 0.0f, scale.y);
+    glm::mat2 rotation(cosd(phi), sind(phi), -sind(phi), cosd(phi));
+    glm::mat2 transform = glm::mat2(scale.x, 0.0f, 0.0f, scale.y) * rotation;
     int j = 0;
     int idx = 0;
     for (const auto& poly : polygons) {
@@ -323,6 +324,7 @@ Manifold Manifold::Extrude(const CrossSection& crossSection, float height,
  */
 Manifold Manifold::Revolve(const CrossSection& crossSection,
                            int circularSegments, float revolveDegrees) {
+  ZoneScoped;
   Polygons polygons = crossSection.ToPolygons();
 
   if (polygons.size() == 0) {
@@ -330,8 +332,9 @@ Manifold Manifold::Revolve(const CrossSection& crossSection,
   }
 
   const Rect bounds = crossSection.Bounds();
+  const float radius = bounds.max.x;
 
-  if (bounds.max.x <= 0) {
+  if (radius <= 0) {
     return Invalid();
   } else if (bounds.min.x < 0) {
     // Take the x>=0 slice.
@@ -343,21 +346,15 @@ Manifold Manifold::Revolve(const CrossSection& crossSection,
     polygons = (crossSection ^ posBoundingBox).ToPolygons();
   }
 
-  float radius = 0.0f;
-  for (const auto& poly : polygons) {
-    for (const auto& vert : poly) {
-      radius = fmax(radius, vert.x);
-    }
-  }
-
   if (revolveDegrees > 360.0f) {
     revolveDegrees = 360.0f;
   }
   const bool isFullRevolution = revolveDegrees == 360.0f;
 
-  const int nDivisions = circularSegments > 2
-                             ? circularSegments
-                             : Quality::GetCircularSegments(radius);
+  const int nDivisions =
+      circularSegments > 2
+          ? circularSegments
+          : Quality::GetCircularSegments(radius) * revolveDegrees / 360;
 
   auto pImpl_ = std::make_shared<Impl>();
   auto& vertPos = pImpl_->vertPos_;
@@ -387,14 +384,14 @@ Manifold Manifold::Revolve(const CrossSection& crossSection,
 
       if (!isFullRevolution) startPoses.push_back(startPosIndex);
 
+      const glm::vec2 currPolyVertex = poly[polyVert];
+      const glm::vec2 prevPolyVertex =
+          poly[polyVert == 0 ? poly.size() - 1 : polyVert - 1];
+
       const int prevStartPosIndex =
           startPosIndex +
-          (polyVert == 0 ? nRevolveAxisVerts + (nSlices * nPosVerts) - nSlices
-           : poly[polyVert - 1].x == 0.0 ? -1
-                                         : -nSlices);
-      glm::vec2 currPolyVertex = poly[polyVert];
-      glm::vec2 prevPolyVertex =
-          poly[polyVert == 0 ? poly.size() - 1 : polyVert - 1];
+          (polyVert == 0 ? nRevolveAxisVerts + (nSlices * nPosVerts) : 0) +
+          (prevPolyVertex.x == 0.0 ? -1 : -nSlices);
 
       for (int slice = 0; slice < nSlices; ++slice) {
         const float phi = slice * dPhi;
@@ -467,6 +464,7 @@ Manifold Manifold::Compose(const std::vector<Manifold>& manifolds) {
  * containing a copy of the original. It is the inverse operation of Compose().
  */
 std::vector<Manifold> Manifold::Decompose() const {
+  ZoneScoped;
   UnionFind<> uf(NumVert());
   // Graph graph;
   auto pImpl_ = GetCsgLeafNode().GetImpl();

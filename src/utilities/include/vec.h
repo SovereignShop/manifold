@@ -21,9 +21,9 @@
 #define TracyFreeS(ptr, n) (void)0
 #endif
 
-// #include "optional_assert.h"
 #include "par.h"
 #include "public.h"
+#include "vec_view.h"
 
 namespace manifold {
 
@@ -32,100 +32,6 @@ namespace manifold {
  */
 template <typename T>
 class Vec;
-
-/**
- * View for Vec, can perform offset operation.
- * This will be invalidated when the original vector is dropped or changes
- * length.
- */
-template <typename T>
-class VecView {
- public:
-  using Iter = T *;
-  using IterC = const T *;
-
-  VecView(T *ptr_, int size_) : ptr_(ptr_), size_(size_) {}
-
-  VecView(const VecView &other) {
-    ptr_ = other.ptr_;
-    size_ = other.size_;
-  }
-
-  VecView &operator=(const VecView &other) {
-    ptr_ = other.ptr_;
-    size_ = other.size_;
-    return *this;
-  }
-
-  // allows conversion to a const VecView
-  operator VecView<const T>() const { return {ptr_, size_}; }
-
-  inline const T &operator[](int i) const {
-    if (i < 0 || i >= size_) throw std::out_of_range("Vec out of range");
-    return ptr_[i];
-  }
-
-  inline T &operator[](int i) {
-    if (i < 0 || i >= size_) throw std::out_of_range("Vec out of range");
-    return ptr_[i];
-  }
-
-  IterC cbegin() const { return ptr_; }
-  IterC cend() const { return ptr_ + size_; }
-
-  IterC begin() const { return cbegin(); }
-  IterC end() const { return cend(); }
-
-  Iter begin() { return ptr_; }
-  Iter end() { return ptr_ + size_; }
-
-  const T &front() const {
-    if (size_ == 0)
-      throw std::out_of_range("attempt to take the front of an empty vector");
-    return ptr_[0];
-  }
-
-  const T &back() const {
-    if (size_ == 0)
-      throw std::out_of_range("attempt to take the back of an empty vector");
-    return ptr_[size_ - 1];
-  }
-
-  T &front() {
-    if (size_ == 0)
-      throw std::out_of_range("attempt to take the front of an empty vector");
-    return ptr_[0];
-  }
-
-  T &back() {
-    if (size_ == 0)
-      throw std::out_of_range("attempt to take the back of an empty vector");
-    return ptr_[size_ - 1];
-  }
-
-  int size() const { return size_; }
-
-  bool empty() const { return size_ == 0; }
-
-#ifdef MANIFOLD_DEBUG
-  void Dump() {
-    std::cout << "Vec = " << std::endl;
-    for (int i = 0; i < size(); ++i) {
-      std::cout << i << ", " << ptr_[i] << ", " << std::endl;
-    }
-    std::cout << std::endl;
-  }
-#endif
-
- protected:
-  T *ptr_ = nullptr;
-  int size_ = 0;
-
-  VecView() = default;
-  friend class Vec<T>;
-  friend class Vec<typename std::remove_const<T>::type>;
-  friend class VecView<typename std::remove_const<T>::type>;
-};
 
 /*
  * Specialized vector implementation with multithreaded fill and uninitialized
@@ -143,12 +49,12 @@ class Vec : public VecView<T> {
   // Note that the vector constructed with this constructor will contain
   // uninitialized memory. Please specify `val` if you need to make sure that
   // the data is initialized.
-  Vec(int size) {
+  Vec(size_t size) {
     reserve(size);
     this->size_ = size;
   }
 
-  Vec(int size, T val) { resize(size, val); }
+  Vec(size_t size, T val) { resize(size, val); }
 
   Vec(const Vec<T> &vec) {
     this->size_ = vec.size();
@@ -157,7 +63,7 @@ class Vec : public VecView<T> {
     if (this->size_ != 0) {
       this->ptr_ = reinterpret_cast<T *>(malloc(this->size_ * sizeof(T)));
       if (this->ptr_ == nullptr) throw std::bad_alloc();
-      TracyAllocS(ptr_, size_ * sizeof(T), 3);
+      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
       uninitialized_copy(policy, vec.begin(), vec.end(), this->ptr_);
     }
   }
@@ -169,7 +75,7 @@ class Vec : public VecView<T> {
     if (this->size_ != 0) {
       this->ptr_ = reinterpret_cast<T *>(malloc(this->size_ * sizeof(T)));
       if (this->ptr_ == nullptr) throw std::bad_alloc();
-      TracyAllocS(ptr_, size_ * sizeof(T), 3);
+      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
       uninitialized_copy(policy, vec.begin(), vec.end(), this->ptr_);
     }
   }
@@ -188,7 +94,7 @@ class Vec : public VecView<T> {
 
   ~Vec() {
     if (this->ptr_ != nullptr) {
-      TracyFreeS(ptr_, 3);
+      TracyFreeS(this->ptr_, 3);
       free(this->ptr_);
     }
     this->ptr_ = nullptr;
@@ -208,7 +114,7 @@ class Vec : public VecView<T> {
     if (this->size_ != 0) {
       this->ptr_ = reinterpret_cast<T *>(malloc(this->size_ * sizeof(T)));
       if (this->ptr_ == nullptr) throw std::bad_alloc();
-      TracyAllocS(ptr_, size_ * sizeof(T), 3);
+      TracyAllocS(this->ptr_, this->size_ * sizeof(T), 3);
       uninitialized_copy(policy, other.begin(), other.end(), this->ptr_);
     }
     return *this;
@@ -217,7 +123,7 @@ class Vec : public VecView<T> {
   Vec<T> &operator=(Vec<T> &&other) {
     if (&other == this) return *this;
     if (this->ptr_ != nullptr) {
-      TracyFreeS(ptr_, 3);
+      TracyFreeS(this->ptr_, 3);
       free(this->ptr_);
     }
     this->size_ = other.size_;
@@ -248,7 +154,7 @@ class Vec : public VecView<T> {
     this->ptr_[this->size_++] = val;
   }
 
-  void reserve(int n) {
+  void reserve(size_t n) {
     if (n > capacity_) {
       T *newBuffer = reinterpret_cast<T *>(malloc(n * sizeof(T)));
       if (newBuffer == nullptr) throw std::bad_alloc();
@@ -257,7 +163,7 @@ class Vec : public VecView<T> {
         uninitialized_copy(autoPolicy(this->size_), this->ptr_,
                            this->ptr_ + this->size_, newBuffer);
       if (this->ptr_ != nullptr) {
-        TracyFreeS(ptr_, 3);
+        TracyFreeS(this->ptr_, 3);
         free(this->ptr_);
       }
       this->ptr_ = newBuffer;
@@ -265,7 +171,7 @@ class Vec : public VecView<T> {
     }
   }
 
-  void resize(int newSize, T val = T()) {
+  void resize(size_t newSize, T val = T()) {
     bool shrink = this->size_ > 2 * newSize;
     reserve(newSize);
     if (this->size_ < newSize) {
@@ -281,20 +187,21 @@ class Vec : public VecView<T> {
     if (this->size_ > 0) {
       newBuffer = reinterpret_cast<T *>(malloc(this->size_ * sizeof(T)));
       if (newBuffer == nullptr) throw std::bad_alloc();
-      TracyAllocS(newBuffer, size_ * sizeof(T), 3);
+      TracyAllocS(newBuffer, this->size_ * sizeof(T), 3);
       uninitialized_copy(autoPolicy(this->size_), this->ptr_,
                          this->ptr_ + this->size_, newBuffer);
     }
     if (this->ptr_ != nullptr) {
-      TracyFreeS(ptr_, 3);
+      TracyFreeS(this->ptr_, 3);
       free(this->ptr_);
     }
     this->ptr_ = newBuffer;
     capacity_ = this->size_;
   }
 
-  VecView<T> view(int offset = 0, int length = -1) {
-    if (length == -1) {
+  VecView<T> view(size_t offset = 0,
+                  size_t length = std::numeric_limits<size_t>::max()) {
+    if (length == std::numeric_limits<size_t>::max()) {
       length = this->size_ - offset;
       if (length < 0) throw std::out_of_range("Vec::view out of range");
     } else if (offset + length > this->size_ || offset < 0) {
@@ -305,8 +212,10 @@ class Vec : public VecView<T> {
     return VecView<T>(this->ptr_ + offset, length);
   }
 
-  VecView<const T> cview(int offset = 0, int length = -1) const {
-    if (length == -1) {
+  VecView<const T> cview(
+      size_t offset = 0,
+      size_t length = std::numeric_limits<size_t>::max()) const {
+    if (length == std::numeric_limits<size_t>::max()) {
       length = this->size_ - offset;
       if (length < 0) throw std::out_of_range("Vec::cview out of range");
     } else if (offset + length > this->size_ || offset < 0) {
@@ -317,7 +226,9 @@ class Vec : public VecView<T> {
     return VecView<const T>(this->ptr_ + offset, length);
   }
 
-  VecView<const T> view(int offset = 0, int length = -1) const {
+  VecView<const T> view(
+      size_t offset = 0,
+      size_t length = std::numeric_limits<size_t>::max()) const {
     return cview(offset, length);
   }
 
@@ -325,7 +236,9 @@ class Vec : public VecView<T> {
   const T *data() const { return this->ptr_; }
 
  private:
-  int capacity_ = 0;
+  size_t capacity_ = 0;
+
+  static_assert(std::is_trivially_destructible<T>::value);
 };
 /** @} */
 }  // namespace manifold

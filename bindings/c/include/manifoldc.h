@@ -111,6 +111,12 @@ ManifoldManifold *manifold_trim_by_plane(void *mem, ManifoldManifold *m,
                                          float normal_x, float normal_y,
                                          float normal_z, float offset);
 
+// 3D to 2D
+
+ManifoldCrossSection *manifold_slice(void *mem, ManifoldManifold *m,
+                                     float height);
+ManifoldCrossSection *manifold_project(void *mem, ManifoldManifold *m);
+
 // Convex Hulls
 
 ManifoldManifold *manifold_hull(void *mem, ManifoldManifold *m);
@@ -134,6 +140,8 @@ ManifoldManifold *manifold_mirror(void *mem, ManifoldManifold *m, float nx,
 ManifoldManifold *manifold_warp(void *mem, ManifoldManifold *m,
                                 ManifoldVec3 (*fun)(float, float, float));
 ManifoldManifold *manifold_refine(void *mem, ManifoldManifold *m, int refine);
+ManifoldManifold *manifold_refine_to_length(void *mem, ManifoldManifold *m,
+                                            float length);
 
 // Manifold Shapes / Constructors
 

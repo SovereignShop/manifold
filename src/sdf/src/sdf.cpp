@@ -151,6 +151,7 @@ struct ComputeVerts {
   }
 
   inline void operator()(Uint64 mortonCode) {
+    ZoneScoped;
     if (gridVerts.Full()) return;
 
     const glm::ivec4 gridIndex = DecodeMorton(mortonCode);
@@ -205,6 +206,7 @@ struct BuildTris {
   }
 
   void operator()(int idx) {
+    ZoneScoped;
     Uint64 basekey = gridVerts.KeyAt(idx);
     if (basekey == kOpen) return;
 
@@ -305,7 +307,6 @@ Mesh LevelSet(std::function<float(glm::vec3)> sdf, Box bounds, float edgeLength,
   Mesh out;
 
   const glm::vec3 dim = bounds.Size();
-  const float maxDim = std::max(dim[0], std::max(dim[1], dim[2]));
   const glm::ivec3 gridSize(dim / edgeLength);
   const glm::vec3 spacing = dim / (glm::vec3(gridSize));
 
@@ -317,14 +318,14 @@ Mesh LevelSet(std::function<float(glm::vec3)> sdf, Box bounds, float edgeLength,
   // active.
   const auto pol = canParallel ? autoPolicy(maxMorton) : ExecutionPolicy::Seq;
 
-  int tableSize = glm::min(
+  size_t tableSize = glm::min(
       2 * maxMorton, static_cast<Uint64>(10 * glm::pow(maxMorton, 0.667)));
   HashTable<GridVert, identity> gridVerts(tableSize);
   Vec<glm::vec3> vertPos(gridVerts.Size() * 7);
 
   while (1) {
     Vec<int> index(1, 0);
-    for_each_n(pol, countAt(0), maxMorton + 1,
+    for_each_n(pol, countAt(0_z), maxMorton + 1,
                ComputeVerts({vertPos, index, gridVerts.D(), sdf, bounds.min,
                              gridSize + 1, spacing, level}));
 
@@ -333,6 +334,7 @@ Mesh LevelSet(std::function<float(glm::vec3)> sdf, Box bounds, float edgeLength,
       const Uint64 lastMorton =
           MortonCode(glm::ivec4((lastVert - bounds.min) / spacing, 1));
       const float ratio = static_cast<float>(maxMorton) / lastMorton;
+
       if (ratio > 1000)  // do not trust the ratio if it is too large
         tableSize *= 2;
       else
@@ -348,7 +350,7 @@ Mesh LevelSet(std::function<float(glm::vec3)> sdf, Box bounds, float edgeLength,
   Vec<glm::ivec3> triVerts(gridVerts.Entries() * 12);  // worst case
 
   Vec<int> index(1, 0);
-  for_each_n(pol, countAt(0), gridVerts.Size(),
+  for_each_n(pol, countAt(0_z), gridVerts.Size(),
              BuildTris({triVerts, index, gridVerts.D()}));
   triVerts.resize(index[0]);
 

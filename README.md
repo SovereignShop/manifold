@@ -15,23 +15,26 @@ You need to include a classifier for your platform and desired backend. For linu
 
 For mac, only `mac-TBB-x86_64` and `mac-x86_64` are available.
 
-## [ManifoldCAD.org](https://manifoldcad.org)
+## Manifold Frontend Sandboxes
 
-If you like OpenSCAD / JSCAD, you might also like ManifoldCAD - our own solid modelling web app. Our WASM is not multithreaded yet, but it's still quite fast and a good way to test out our Manifold library.
+### [ManifoldCAD.org](https://manifoldcad.org)
+
+If you like OpenSCAD / JSCAD, you might also like ManifoldCAD - our own solid modelling web app where you script in JS/TS. This uses our npm package, [manifold-3d](https://www.npmjs.com/package/manifold-3d), built via WASM. It's not quite as fast as our raw C++, but it's hard to beat for interoperability.
+
+*Note for Firefox users: If you find the editor is stuck on **Loading...**, setting
+`dom.workers.modules.enabled: true` in your `about:config`, as mentioned in
+[issue#328](https://github.com/elalish/manifold/issues/328#issuecomment-1473847102)
+may solve the problem.*
+
+### [Python Colab Example](https://colab.research.google.com/drive/1VxrFYHPSHZgUbl9TeWzCeovlpXrPQ5J5?usp=sharing)
+
+If you prefer Python to JS/TS, make your own copy of the example notebook above. It demonstrates interop between our [`manifold3d`](https://pypi.org/project/manifold3d/) PyPI library and the popular [`trimesh`](https://pypi.org/project/trimesh/) library, including showing the interactive model right in the notebook and saving 3D model output.
 
 ![A metallic Menger sponge](https://elalish.github.io/manifold/samples/models/mengerSponge3.webp "A metallic Menger sponge")
 
-### Note for Firefox users
-
-If you find the editor is stuck on **Loading...**, setting
-`dom.workers.modules.enabled: true` in your `about:config`, as mentioned in the
-discussion of the
-[issue#328](https://github.com/elalish/manifold/issues/328#issuecomment-1473847102)
-of this repository may solve the problem.
-
 # Manifold
 
-[**API Documentation**](https://elalish.github.io/manifold/docs/html/modules.html) | [**Algorithm Documentation**](https://github.com/elalish/manifold/wiki/Manifold-Library) | [**Blog Posts**](https://elalish.blogspot.com/search/label/Manifold) | [**Web Examples**](https://elalish.github.io/manifold/model-viewer.html)
+[**API Documentation**](https://elalish.github.io/manifold/docs/html/topics.html) | [**Algorithm Documentation**](https://github.com/elalish/manifold/wiki/Manifold-Library) | [**Blog Posts**](https://elalish.blogspot.com/search/label/Manifold) | [**Web Examples**](https://elalish.github.io/manifold/model-viewer.html)
 
 [Manifold](https://github.com/elalish/manifold) is a geometry library dedicated to creating and operating on manifold triangle meshes. A [manifold mesh](https://github.com/elalish/manifold/wiki/Manifold-Library#manifoldness) is a mesh that represents a solid object, and so is very important in manufacturing, CAD, structural analysis, etc. Further information can be found on the [wiki](https://github.com/elalish/manifold/wiki/Manifold-Library).
 
@@ -130,7 +133,7 @@ use the extension, please add `$BUILD_DIR/bindings/python` to your `PYTHONPATH`,
 can be found in `bindings/python/examples`. To see exported samples, run:
 ```
 sudo apt install pkg-config libpython3-dev python3 python3-distutils python3-pip
-pip install trimesh
+pip install trimesh pytest
 python3 run_all.py -e
 ```
 
@@ -144,14 +147,34 @@ python binding documentation:
 
 For more detailed documentation, please refer to the C++ API.
 
+### Windows Shenanigans
+
+Windows users should build with `-DBUILD_SHARED_LIBS=OFF`, as enabling shared
+libraries in general makes things very complicated.
+
+The DLL file for manifoldc (C FFI bindings) when built with msvc is in `${CMAKE_BINARY_DIR}/bin/${BUILD_TYPE}/manifoldc.dll`.
+For example, for the following command, the path relative to the project root directory is `build/bin/Release/manifoldc.dll`.
+```sh
+cmake . -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DMANIFOLD_DEBUG=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -A x64 -B build
+```
+
 ## Contributing
 
 Contributions are welcome! A lower barrier contribution is to simply make a PR that adds a test, especially if it repros an issue you've found. Simply name it prepended with DISABLED_, so that it passes the CI. That will be a very strong signal to me to fix your issue. However, if you know how to fix it yourself, then including the fix in your PR would be much appreciated!
+
+### Formatting
+
+There is a formatting script `format.sh` that automatically formats everything.
+It requires clang-format 11 and black formatter for python.
+
+If you have clang-format installed but without clang-11, you can specify the
+clang-format executable by setting the `CLANG_FORMAT` environment variable.
 
 ### Profiling
 
 There is now basic support for the [Tracy profiler](https://github.com/wolfpld/tracy) for our tests.
 To enable tracing, compile with `-DTRACY_ENABLE=on` cmake option, and run the test with Tracy server running.
+To enable memory profiling in addition to tracing, compile with `-DTRACY_MEMORY_USAGE=ON` in addition to `-DTRACY_ENABLE=ON`.
 
 ### Fuzzing Support
 

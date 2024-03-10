@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #pragma once
+#define GLM_ENABLE_EXPERIMENTAL  // needed for glm/gtx/compatibility.hpp
 #define GLM_FORCE_EXPLICIT_CTOR
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
@@ -29,6 +30,8 @@
 #include <iostream>
 #include <sstream>
 #endif
+
+constexpr std::size_t operator""_z(unsigned long long n) { return n; }
 
 namespace manifold {
 
@@ -633,6 +636,13 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& stream, const glm::tvec4<T>& v) {
   return stream << "x = " << v.x << ", y = " << v.y << ", z = " << v.z
                 << ", w = " << v.w;
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const glm::mat3& mat) {
+  glm::mat3 tam = glm::transpose(mat);
+  return stream << tam[0] << std::endl
+                << tam[1] << std::endl
+                << tam[2] << std::endl;
 }
 
 inline std::ostream& operator<<(std::ostream& stream, const glm::mat4x3& mat) {
