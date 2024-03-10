@@ -34,7 +34,8 @@ import org.bytedeco.javacpp.annotation.*;
 
 @Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"},
           linkpath = { LibraryPaths.MANIFOLD_LIB_DIR,
-                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS },
+                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS,
+                       LibraryPaths.CLIPPER_LIB_DIR},
           link = { "manifold", "Clipper2" })
 @Namespace("manifold")
 public class Manifold extends Pointer {
