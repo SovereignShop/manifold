@@ -223,7 +223,8 @@ class Manifold {
   /** @name Mesh ID
    *  Details of the manifold's relation to its input meshes, for the purposes
    * of reapplying mesh properties.
-   *
+   */
+  ///@{
   int OriginalID() const;
   Manifold AsOriginal() const;
   static uint32_t ReserveIDs(uint32_t);
