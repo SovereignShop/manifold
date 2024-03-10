@@ -291,8 +291,9 @@ jobs:
         echo "PATH=$(brew --prefix python@3.12)/bin:/opt/homebrew/opt/python@3.12/libexec/bin:$PATH" >> $GITHUB_ENV
     - name: Install common dependencies
       run: |
+        python3 -m venv .venv
         brew install pkg-config assimp
-        pip install trimesh
+        # pip install trimesh
     - name: Install TBB
       if: matrix.parallel_backend == 'TBB'
       run: brew install tbb
