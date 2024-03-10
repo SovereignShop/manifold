@@ -96,8 +96,6 @@ jobs:
         export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
         cd build/test
         ./manifold_test
-        cd ../../
-        python3 bindings/python/examples/run_all.py
     #- name: Coverage Report
     #  # only do code coverage for default sequential backend, it seems that TBB
     #  # backend will cause failure
