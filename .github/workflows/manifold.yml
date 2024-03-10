@@ -394,11 +394,6 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: manifold_java_bindings_linux_NONE_ON_${{env.VERSION}}
-        path: linux-cuda-jar
-    - name: Download Artifacts
-      uses: actions/download-artifact@v2
-      with:
         name: manifold_java_bindings_mac_TBB_${{env.VERSION}}
         path: mac-tbb-jar
     - name: Download Artifacts
@@ -406,19 +401,12 @@ jobs:
       with:
         name: manifold_java_bindings_linux_TBB_OFF_${{env.VERSION}}
         path: linux-tbb-jar
-    - name: Download Artifacts
-      uses: actions/download-artifact@v2
-      with:
-        name: manifold_java_bindings_linux_TBB_ON_${{env.VERSION}}
-        path: linux-tbb-cuda-jar
     - name: Deploy Jars
       shell: bash
       run: |
         VERSION=$(cat bindings/java/version.txt)
         linux_jar_file=linux-jar/manifold3d-$VERSION-linux-x86_64.jar
-        linux_cuda_jar_file=linux-cuda-jar/manifold3d-$VERSION-linux-cuda-x86_64.jar
         linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
-        linux_tbb_cuda_jar_file=linux-tbb-cuda-jar/manifold3d-$VERSION-linux-TBB-cuda-x86_64.jar
         mac_tbb_jar_file=mac-tbb-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
 
         mvn versions:set -DnewVersion=$VERSION --file bindings/java/pom.xml
@@ -432,9 +420,9 @@ jobs:
           -Dpackaging=jar \
           -Dfile=$linux_tbb_jar_file \
           -Dclassifier=linux-TBB-x86_64 \
-          -Dfiles=$mac_tbb_jar_file,$linux_tbb_cuda_jar_file,$linux_cuda_jar_file,$linux_jar_file \
-          -Dclassifiers=mac-TBB-x86_64,linux-TBB-cuda-x86_64,linux-cuda-x86_64,linux-x86_64 \
-          -Dtypes=jar,jar,jar,jar \
+          -Dfiles=$mac_tbb_jar_file,$linux_jar_file \
+          -Dclassifiers=mac-TBB-x86_64,linux-x86_64 \
+          -Dtypes=jar,jar \
           --settings=bindings/java/settings.xml
       env:
         CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
