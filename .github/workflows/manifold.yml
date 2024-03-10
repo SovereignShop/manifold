@@ -294,7 +294,6 @@ jobs:
         brew cleanup
     - name: Install Java and Maven
       run: |
-        brew link --overwrite python@3.12
         brew install openjdk@17
         export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
         brew install --ignore-dependencies maven
