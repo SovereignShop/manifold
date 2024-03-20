@@ -6,7 +6,7 @@ glm::vec3 rodrigues_rotation(const glm::vec3& v, const glm::vec3& k, float a) {
     return v * glm::cos(a) + glm::cross(k, v) * glm::sin(a) + k * glm::dot(k, v) * (1 - glm::cos(a));
 }
 
-glm::mat4x3 Yaw(const glm::mat4x3& m, float a) {
+glm::mat4x3 Yaw(const glm::mat4x3& m, double a) {
     glm::vec3 d[] = {
         rodrigues_rotation(m[0], m[1], a),
         m[1],
@@ -15,7 +15,7 @@ glm::mat4x3 Yaw(const glm::mat4x3& m, float a) {
     return glm::mat4x3(d[0], d[1], d[2], m[3]);
 }
 
-glm::mat4x3 Pitch(const glm::mat4x3& m, float a) {
+glm::mat4x3 Pitch(const glm::mat4x3& m, double a) {
     glm::vec3 d[] = {
         m[0],
         rodrigues_rotation(m[1], m[0], a),
@@ -24,7 +24,7 @@ glm::mat4x3 Pitch(const glm::mat4x3& m, float a) {
     return glm::mat4x3(d[0], d[1], d[2], m[3]);
 }
 
-glm::mat4x3 Roll(const glm::mat4x3& m, float a) {
+glm::mat4x3 Roll(const glm::mat4x3& m, double a) {
     glm::vec3 d[] = {
         rodrigues_rotation(m[0], m[2], a),
         rodrigues_rotation(m[1], m[2], a),
@@ -33,7 +33,7 @@ glm::mat4x3 Roll(const glm::mat4x3& m, float a) {
     return glm::mat4x3(d[0], d[1], d[2], m[3]);
 }
 
-glm::mat4x3 Rotate(const glm::mat4x3& m, const glm::vec3& axis, float a) {
+glm::mat4x3 Rotate(const glm::mat4x3& m, const glm::vec3& axis, double a) {
     glm::vec3 d[] = {
         rodrigues_rotation(m[0], axis, a),
         rodrigues_rotation(m[1], axis, a),
@@ -42,18 +42,16 @@ glm::mat4x3 Rotate(const glm::mat4x3& m, const glm::vec3& axis, float a) {
     return glm::mat4x3(d[0], d[1], d[2], m[3]);
 }
 
-glm::mat4x3 InvertRotate(const glm::mat4x3& m, const glm::vec3& angles) {
-    glm::mat4x3 res = m;
-    if (angles[2] != 0) {
-        res = Roll(res, -angles[2]);
-    }
-    if (angles[1] != 0) {
-        res = Yaw(res, -angles[1]);
-    }
-    if (angles[0] != 0) {
-        res = Pitch(res, -angles[0]);
-    }
-    return res;
+glm::vec2 RotateVec2(const glm::vec2& v, double angleRadians) {
+    // Create the rotation matrix components
+    double cosAngle = std::cos(angleRadians);
+    double sinAngle = std::sin(angleRadians);
+
+    // Apply the rotation matrix to the vector v
+    return glm::vec2(
+        cosAngle * v.x - sinAngle * v.y,
+        sinAngle * v.x + cosAngle * v.y
+    );
 }
 
 glm::mat4x3 Rotate(const glm::mat4x3& m, const glm::vec3& angles) {
@@ -70,9 +68,27 @@ glm::mat4x3 Rotate(const glm::mat4x3& m, const glm::vec3& angles) {
     return res;
 }
 
+glm::mat3x2 Rotate(glm::mat3x2 m, double angleRadians) {
+    // Rotate basis vectors
+    glm::vec2 xAxis = RotateVec2(glm::vec2(m[0][0], m[0][1]), angleRadians);
+    glm::vec2 yAxis = RotateVec2(glm::vec2(m[1][0], m[1][1]), angleRadians);
+
+    return glm::mat3x2(xAxis.x, xAxis.y,
+                       yAxis.x, yAxis.y,
+                       m[2][0], m[2][1]);
+}
+
 glm::mat4x3 SetRotation(const glm::mat4x3& m, const glm::mat3x3& rotation) {
     glm::mat4x3 result = m;
     for (int i = 0; i < 3; ++i) {
+        result[i] = rotation[i];
+    }
+    return result;
+}
+
+glm::mat4x3 SetRotation(const glm::mat3x2& m, const glm::mat2x2& rotation) {
+    glm::mat3x2 result = m;
+    for (int i = 0; i < 2; ++i) {
         result[i] = rotation[i];
     }
     return result;
@@ -94,9 +110,27 @@ glm::mat4x3 Translate(const glm::mat4x3& m, const glm::vec3& offset) {
     return result;
 }
 
+glm::mat3x2 Translate(const glm::mat3x2& m, const glm::vec2& offset) {
+    glm::mat3x2 result = m;
+
+    if (offset[0] != 0.0) {
+        result[2] += m[0]*offset[0];
+    }
+    if (offset[1] != 0.0) {
+        result[2] += m[1]*offset[1];
+    }
+    return result;
+}
+
 glm::mat4x3 SetTranslation(const glm::mat4x3& m, const glm::vec3& translation) {
     glm::mat4x3 result = m;
     result[3] = translation;
+    return result;
+}
+
+glm::mat3x2 SetTranslation(const glm::mat3x2& m, const glm::vec2& translation) {
+    glm::mat3x2 result = m;
+    result[2] = translation;
     return result;
 }
 
@@ -131,6 +165,20 @@ glm::mat4x3 InvertTransform(const glm::mat4x3& m) {
   return result;
 }
 
+glm::mat3x2 InvertTransform(const glm::mat3x2& m) {
+    // Extract the 2x2 rotation/scaling part of the matrix
+    glm::mat2 rotationPart = glm::mat2(m);
+    // Calculate the inverse rotation/scaling by transposing
+    glm::mat2 unRotated = glm::transpose(rotationPart);
+
+    // Convert back to a 3x3 matrix for translation
+    glm::vec2 translation = -m[2];
+    // Apply the inverted translation
+    glm::mat3x2 result = Translate(unRotated, translation);
+
+    return result;
+}
+
 glm::mat4x3 CombineTransforms(const glm::mat4x3& a, const glm::mat4x3& b) {
     glm::mat4x3 result;
 
@@ -144,5 +192,21 @@ glm::mat4x3 CombineTransforms(const glm::mat4x3& a, const glm::mat4x3& b) {
 
     return result;
 }
+
+glm::mat3x2 CombineTransforms(const glm::mat3x2& a, const glm::mat3x2& b) {
+    glm::mat3x2 result;
+
+    // Apply rotation of 'a' to 'b' and normalize
+    for (int i = 0; i < 2; ++i) {
+        result[i] = glm::normalize(a[0]*b[i][0] + a[1]*b[i][1]);
+    }
+
+    // Apply translation of 'a' to 'b'
+    result[2] = a[0]*b[2][0] + a[1]*b[2][1];
+
+    return result;
+}
+
+
 
 }
