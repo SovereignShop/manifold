@@ -178,6 +178,9 @@ public class Manifold extends Pointer {
     @Name("Project")
     public native @ByVal CrossSection project();
 
+    @Name("RefineToLength")
+    public native @ByVal Manifold refineToLength(float length);
+
     @Name("BatchBoolean")
     public static native @ByVal Manifold BatchBoolean(@ByRef ManifoldVector manifolds, @Cast("manifold::OpType") int op);
 
