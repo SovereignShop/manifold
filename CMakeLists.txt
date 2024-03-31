@@ -141,6 +141,7 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
+install(TARGETS TextToPolygon EXPORT manifoldTargets)
 target_link_libraries(cross_section PUBLIC TextToPolygon)
 
 install(EXPORT manifoldTargets DESTINATION ${CMAKE_INSTALL_DATADIR}/manifold)
