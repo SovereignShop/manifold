@@ -17,6 +17,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include "text_to_polygon.h"
 
 #include "glm/ext/matrix_float3x2.hpp"
 #include "glm/ext/vector_float2.hpp"
@@ -74,6 +75,7 @@ class CrossSection {
   CrossSection(const Polygons& contours,
                FillRule fillrule = FillRule::Positive);
   CrossSection(const Rect& rect);
+  static CrossSection Text(const std::string& fontFile, const std::string& text, u_int32_t pixelHeight, int interpRes);
   static CrossSection Square(const glm::vec2 dims, bool center = false);
   static CrossSection Circle(float radius, int circularSegments = 0);
   ///@}

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "cross_section.h"
+#include "text_to_polygon.h"
 
 #include "clipper2/clipper.core.h"
 #include "clipper2/clipper.h"
@@ -302,6 +303,19 @@ std::shared_ptr<const PathImpl> CrossSection::GetPaths() const {
   paths_ = shared_paths(::transform(paths_->paths_, transform_));
   transform_ = glm::mat3x2(1.0f);
   return paths_;
+}
+
+/**
+ * Renders text to a cross section.
+ *
+ * @param fontFile path to a .ttf font file.
+ * @param text Text to render as polygon
+ * @param pixelHeight freetype pixelHeight.
+ * @param interpRes Resolution of interpolation of curves.
+ */
+CrossSection CrossSection::Text(const std::string& fontFile, const std::string& text, u_int32_t pixelHeight, int interpRes) {
+  Polygons polys = TextToPolygon::textToPolygons(fontFile, text, pixelHeight, interpRes);
+  return CrossSection(polys, FillRule::NonZero);
 }
 
 /**

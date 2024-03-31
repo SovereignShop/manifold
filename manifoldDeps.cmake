@@ -37,6 +37,24 @@ else()
     endif()
 endif()
 
+FetchContent_Declare(
+  TextToPolygon
+  GIT_REPOSITORY https://github.com/SovereignShop/text-to-polygon.git
+  GIT_TAG 670e4a71ba3dd1de2f7edcf73f748ab4eeec3828
+)
+FetchContent_MakeAvailable(TextToPolygon)
+
+target_link_libraries(TextToPolygon
+    PRIVATE
+    freetype
+)
+
+target_include_directories(TextToPolygon PUBLIC
+  $<BUILD_INTERFACE:${texttopolygon_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+)
+
+
 FetchContent_Declare(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG b06b775c1c80af51a1183c0e167f9de3b2351a79
