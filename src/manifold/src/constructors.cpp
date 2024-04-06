@@ -19,6 +19,8 @@
 #include "impl.h"
 #include "par.h"
 #include "polygon.h"
+#include "matrix_transforms.hpp"
+#include <iostream>
 
 namespace {
 using namespace manifold;
@@ -308,6 +310,222 @@ Manifold Manifold::Extrude(const CrossSection& crossSection, float height,
   pImpl_->InitializeOriginal();
   pImpl_->CreateFaces();
   return Manifold(pImpl_);
+}
+
+// Manifold Manifold::Loft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
+//     std::vector<glm::vec3> vertPos;
+//     std::vector<glm::ivec3> triVerts;
+//
+//     if (sections.size() != transforms.size()) {
+//         throw std::runtime_error("Mismatched number of sections and transforms");
+//     }
+//
+//     std::size_t offset = 0;
+//     std::size_t nVerticesInEachSection = 0;
+//
+//     for (std::size_t i = 0; i < sections.size(); ++i) {
+//         const manifold::Polygons polygons = sections[i];
+//         glm::mat4x3 transform = transforms[i];
+//
+//         for (const auto& polygon : polygons) {
+//             for (const glm::vec2& vertex : polygon) {
+//                 glm::vec3 translatedVertex = MatrixTransforms::Translate(transform, glm::vec3(vertex.x, vertex.y, 0))[3];
+//                 vertPos.push_back(translatedVertex);
+//             }
+//         }
+//
+//         if (i == 0) {
+//             nVerticesInEachSection = vertPos.size();
+//         } else if ((vertPos.size() % nVerticesInEachSection) != 0)  {
+//             throw std::runtime_error("Recieved CrossSection with different number of vertices");
+//         }
+//
+//         if (i < sections.size() - 1) {
+//             std::size_t currentOffset = offset;
+//             std::size_t nextOffset = offset + nVerticesInEachSection;
+//
+//             for (std::size_t j = 0; j < polygons.size(); ++j) {
+//                 const auto& polygon = polygons[j];
+//
+//                 for (std::size_t k = 0; k < polygon.size(); ++k) {
+//                     std::size_t nextIndex = (k + 1) % polygon.size();
+//
+//                     glm::ivec3 triangle1(currentOffset + k, currentOffset + nextIndex, nextOffset + k);
+//                     glm::ivec3 triangle2(currentOffset + nextIndex, nextOffset + nextIndex, nextOffset + k);
+//
+//                     triVerts.push_back(triangle1);
+//                     triVerts.push_back(triangle2);
+//                 }
+//                 currentOffset += polygon.size();
+//                 nextOffset += polygon.size();
+//             }
+//         }
+//
+//         offset += nVerticesInEachSection;
+//     }
+//
+//     auto frontPolygons = sections.front();
+//     auto frontTriangles = manifold::Triangulate(frontPolygons, -1.0);
+//     for (auto& tri : frontTriangles) {
+//         triVerts.push_back({tri.z, tri.y, tri.x});
+//     }
+//
+//     auto backPolygons = sections.back();
+//     auto backTriangles = manifold::Triangulate(backPolygons, -1.0);
+//     for (auto& triangle : backTriangles) {
+//         triangle.x += offset - nVerticesInEachSection;
+//         triangle.y += offset - nVerticesInEachSection;
+//         triangle.z += offset - nVerticesInEachSection;
+//         triVerts.push_back(triangle);
+//     }
+//
+//     manifold::Mesh mesh;
+//     mesh.triVerts = triVerts;
+//     mesh.vertPos = vertPos;
+//     return manifold::Manifold(mesh);
+// }
+
+  void printVertex(glm::vec3 vert) {
+    std::cout << "[ "  << vert.x << ", " << vert.y << ", " << vert.z << " ]";
+  }
+
+Manifold Manifold::Loft(const std::vector<Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
+    if (sections.size() != transforms.size()) {
+        throw std::runtime_error("Mismatched number of sections and transforms");
+    }
+
+    std::vector<glm::vec3> vertPos;
+    std::vector<glm::ivec3> triVerts;
+    std::size_t offset = 0;
+
+    int nTri = 0;
+
+    for (std::size_t i = 0; i < sections.size() - 1; ++i) {
+        const Polygons& currentPolygons = sections[i];
+        const Polygons& nextPolygons = sections[i + 1];
+        const glm::mat4x3& currentTransform = transforms[i];
+        const glm::mat4x3& nextTransform = transforms[i + 1];
+
+        // Assuming each section is a single polygon for simplicity
+        const auto& currentPolygon = currentPolygons[0];
+        const auto& nextPolygon = nextPolygons[0];
+
+        std::vector<glm::vec3> currentTransformed;
+        std::vector<glm::vec3> nextTransformed;
+
+        // Transform and store vertices
+        for (const auto& vertex : currentPolygon) {
+            currentTransformed.push_back(MatrixTransforms::Translate(currentTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+        }
+        for (const auto& vertex : nextPolygon) {
+            nextTransformed.push_back(MatrixTransforms::Translate(nextTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+        }
+
+        vertPos.insert(vertPos.end(), currentTransformed.begin(), currentTransformed.end());
+
+        // Find the shortest initial edge
+        float minDistance = std::numeric_limits<float>::max();
+        size_t startIdxCurrent = 0,
+          startIdxNext = 0;
+        for (size_t j = 0; j < nextPolygon.size(); ++j) {
+          float dist = glm::distance(currentTransformed[0], nextTransformed[j]);
+          if (dist < minDistance) {
+            minDistance = dist;
+            startIdxNext = j;
+          }
+        }
+
+        size_t idxCurrent = startIdxCurrent,
+          idxNext = startIdxNext;
+        do {
+            size_t nextIdxCurrent = (idxCurrent + 1) % currentPolygon.size();
+            size_t nextIdxNext = (idxNext + 1) % nextPolygon.size();
+
+            float distCurrentToNext = glm::distance(currentTransformed[nextIdxCurrent], nextTransformed[idxNext]);
+            float distNextToCurrent = glm::distance(currentTransformed[idxCurrent], nextTransformed[nextIdxNext]);
+            float distBoth = glm::distance(currentTransformed[nextIdxCurrent], nextTransformed[nextIdxNext]);
+
+            size_t currentPolySize = currentPolygon.size();
+            size_t nextPolySize = nextPolygon.size();
+
+            if (distBoth <= distCurrentToNext && distBoth <= distNextToCurrent) {
+                std::cout << "Advance Both: ";
+                printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
+                printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + nextIdxNext + currentPolySize});
+                std::cout << std::endl;
+                triVerts.emplace_back(offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize);
+                triVerts.emplace_back(offset + idxCurrent, offset + nextIdxCurrent, offset + nextIdxNext + currentPolySize);
+                nTri += 2;
+                idxCurrent = nextIdxCurrent;
+                idxNext = nextIdxNext;
+            } else if (distCurrentToNext < distNextToCurrent) {
+                std::cout << "Advance Current" << std::endl;
+                printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + idxNext + currentPolySize});
+                std::cout << std::endl;
+                triVerts.emplace_back(offset + idxCurrent, offset + nextIdxCurrent, offset + idxNext + currentPolySize);
+                nTri += 1;
+                idxCurrent = nextIdxCurrent;
+            } else {
+                std::cout << "Advance Next" << std::endl;
+                printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
+                std::cout << std::endl;
+                nTri += 1;
+                triVerts.emplace_back(offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize);
+                idxNext = nextIdxNext;
+            }
+        } while (idxCurrent != startIdxCurrent || idxNext != startIdxNext);
+
+        std::cout << "offset:" << offset << std::endl;
+        offset += currentPolygon.size();
+    }
+
+
+    auto frontPolygons = sections.front();
+    auto frontTriangles = manifold::Triangulate(frontPolygons, -1.0);
+    std::cout << "Front: ";
+    for (auto& tri : frontTriangles) {
+        printVertex({tri[2], tri[1], tri[0]});
+        triVerts.push_back({tri[2], tri[1], tri[0]});
+        nTri += 1;
+    }
+
+    std::cout << std::endl << " Back: ";
+
+    auto backPolygons = sections.back();
+    auto backPolygon = backPolygons[0];
+    auto backTransform = transforms.back();
+    for (const auto& vertex : backPolygon) {
+      vertPos.push_back(MatrixTransforms::Translate(backTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+    }
+    offset += backPolygon.size();
+    auto backTriangles = manifold::Triangulate(backPolygons, -1.0);
+    size_t nLastVerts = 0;
+    for (auto poly : backPolygons)
+      nLastVerts += poly.size();
+
+    for (auto& triangle : backTriangles) {
+        triangle[0] += offset - nLastVerts;
+        triangle[1] += offset - nLastVerts;
+        triangle[2] += offset - nLastVerts;
+        printVertex(triangle);
+        triVerts.push_back(triangle);
+        nTri += 1;
+    }
+
+    std::cout << std::endl;
+
+    std::cout << "N Triangles: " << nTri << std::endl;
+    std::cout << "offset: " << offset << std::endl;
+
+    for (auto vert : vertPos) {
+      printVertex(vert);
+    }
+    std::cout << std::endl;
+    manifold::Mesh mesh;
+    mesh.triVerts = triVerts;
+    mesh.vertPos = vertPos;
+    auto man = manifold::Manifold(mesh);
+    return man;
 }
 
 /**

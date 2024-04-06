@@ -18,6 +18,7 @@
 
 #include "cross_section.h"
 #include "test.h"
+#include "matrix_transforms.hpp"
 
 #ifdef MANIFOLD_EXPORT
 #include "meshIO.h"
@@ -221,6 +222,21 @@ TEST(Manifold, Revolve) {
     EXPECT_NEAR(prop.volume, 14.0f * glm::pi<float>(), 0.2f);
     EXPECT_NEAR(prop.surfaceArea, 30.0f * glm::pi<float>(), 0.2f);
   }
+}
+
+TEST(Manifold, Loft) {
+  std::vector<glm::vec3> tmp;
+  tmp.emplace_back(0.3,0.4,0.5);
+  glm::mat4x3 mat1 = glm::mat4x3(1);
+  glm::mat4x3 mat2 = MatrixTransforms::Translate(glm::mat4x3(1), {0, 0, 12});
+  glm::mat4x3 mat3 = MatrixTransforms::Translate(glm::mat4x3(1), {0, 0, 24});
+  CrossSection square = CrossSection::Square({20, 20}, true);
+  CrossSection circle = CrossSection::Circle(14, 20);
+  Manifold ret = Manifold::Loft({square.ToPolygons(), circle.ToPolygons()}, {mat2, mat3});
+  auto props = ret.GetProperties();
+  ExportMesh("loft.glb", ret.GetMesh(), {});
+  std::cout << "volume:" << props.volume << std::endl;
+  //EXPECT_NEAR(props.volume, 20 * 20 * 10, 0.1);
 }
 
 TEST(Manifold, Revolve2) {

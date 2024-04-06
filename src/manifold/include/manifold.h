@@ -177,6 +177,7 @@ class Manifold {
   static Manifold Revolve(const CrossSection& crossSection,
                           int circularSegments = 0,
                           float revolveDegrees = 360.0f);
+  static Manifold Loft(const std::vector<Polygons>& sections, const std::vector<glm::mat4x3>& transforms);
   ///@}
 
   /** @name Topological
