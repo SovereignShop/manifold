@@ -422,25 +422,35 @@ Manifold Manifold::Loft(const std::vector<Polygons>& sections, const std::vector
         }
 
         vertPos.insert(vertPos.end(), currentTransformed.begin(), currentTransformed.end());
+        // if (i == 0) {
+        //   auto vert1 = vertPos[0];
+        //   auto vert2 = vertPos[1];
+        //   vertPos[0] = MatrixTransforms::Translate(currentTransform, {vert1.x * 1.2, vert1.y * 1.2, 0})[3];
+        //   vertPos[1] = MatrixTransforms::Translate(currentTransform, {vert2.x * 1.2, vert2.y * 1.2, 0})[3];
+        // }
 
         // Find the shortest initial edge
         float minDistance = std::numeric_limits<float>::max();
         size_t startIdxCurrent = 0,
           startIdxNext = 0;
-        for (size_t j = 0; j < nextPolygon.size(); ++j) {
-          float dist = glm::distance(currentTransformed[0], nextTransformed[j]);
-          if (dist < minDistance) {
-            minDistance = dist;
-            startIdxNext = j;
-          }
-        }
+        // for (size_t j = 0; j < nextPolygon.size(); ++j) {
+        //   float dist = glm::distance(currentTransformed[0], nextTransformed[j]);
+        //   if (dist < minDistance) {
+        //     minDistance = dist;
+        //     startIdxNext = j;
+        //   }
+        // }
 
+        bool curHasMoved = false,
+          nextHasMoved = false;
         size_t idxCurrent = startIdxCurrent,
           idxNext = startIdxNext;
         do {
             size_t nextIdxCurrent = (idxCurrent + 1) % currentPolygon.size();
             size_t nextIdxNext = (idxNext + 1) % nextPolygon.size();
 
+            //std::cout << "idxCurrent: " << idxCurrent << ", nextIdxCurrent: " << nextIdxCurrent << ", nextIdxCurrent: " << nextIdxCurrent << ", Size: " << currentPolygon.size() << ", NextSize: " << nextPolygon.size() << std::endl;
+            //std::cout << "idxCurrent: " << idxCurrent << ", idxNext: " << idxNext << std::endl;
             float distCurrentToNext = glm::distance(currentTransformed[nextIdxCurrent], nextTransformed[idxNext]);
             float distNextToCurrent = glm::distance(currentTransformed[idxCurrent], nextTransformed[nextIdxNext]);
             float distBoth = glm::distance(currentTransformed[nextIdxCurrent], nextTransformed[nextIdxNext]);
@@ -448,31 +458,46 @@ Manifold Manifold::Loft(const std::vector<Polygons>& sections, const std::vector
             size_t currentPolySize = currentPolygon.size();
             size_t nextPolySize = nextPolygon.size();
 
-            if (distBoth <= distCurrentToNext && distBoth <= distNextToCurrent) {
-                std::cout << "Advance Both: ";
-                printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
-                printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + nextIdxNext + currentPolySize});
-                std::cout << std::endl;
+            bool curHasNext = nextIdxCurrent != (startIdxCurrent + 1) % currentPolygon.size() || !curHasMoved;
+            bool nextHasNext = nextIdxNext != (startIdxNext + 1) % nextPolygon.size() || !curHasMoved;
+
+            std::cout << "wtf: " << curHasNext << ", " << nextHasNext << ", " << nextIdxCurrent << std::endl;
+
+            if (distBoth < distCurrentToNext && distBoth <= distNextToCurrent && curHasNext && nextHasNext) {
+
+                std::cout << "BOTH: " << "dcn: " << distCurrentToNext << ", dnc: " << distNextToCurrent << ", db: " << distBoth << " CI: " << idxCurrent << ", NI: " << idxNext << std::endl;
+                //std::cout << "Advance Both: ";
+                //printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
+                //printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + nextIdxNext + currentPolySize});
+                //std::cout << std::endl;
                 triVerts.emplace_back(offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize);
                 triVerts.emplace_back(offset + idxCurrent, offset + nextIdxCurrent, offset + nextIdxNext + currentPolySize);
                 nTri += 2;
                 idxCurrent = nextIdxCurrent;
+                curHasMoved = true;
                 idxNext = nextIdxNext;
-            } else if (distCurrentToNext < distNextToCurrent) {
-                std::cout << "Advance Current" << std::endl;
-                printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + idxNext + currentPolySize});
-                std::cout << std::endl;
+                nextHasMoved = true;
+            } else if (distCurrentToNext < distNextToCurrent && curHasNext) {
+                std::cout << "CURRENT: " << "dcn: " << distCurrentToNext << ", dnc: " << distNextToCurrent << ", db: " << distBoth << " CI: " << idxCurrent << ", NI: " << idxNext << std::endl;
+                //std::cout << "Advance Current" << std::endl;
+                //printVertex({offset + idxCurrent, offset + nextIdxCurrent, offset + idxNext + currentPolySize});
+                //std::cout << std::endl;
                 triVerts.emplace_back(offset + idxCurrent, offset + nextIdxCurrent, offset + idxNext + currentPolySize);
                 nTri += 1;
                 idxCurrent = nextIdxCurrent;
+                curHasMoved = true;
             } else {
-                std::cout << "Advance Next" << std::endl;
-                printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
-                std::cout << std::endl;
+                std::cout << "NEXT: " << "dcn: " << distCurrentToNext << ", dnc: " << distNextToCurrent << ", db: " << distBoth << " CI: " << idxCurrent << ", NI: " << idxNext << std::endl;
+                //std::cout << "Advance Next" << std::endl;
+                //printVertex({offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize});
+                //std::cout << std::endl;
                 nTri += 1;
                 triVerts.emplace_back(offset + idxCurrent, offset + nextIdxNext + currentPolySize, offset + idxNext + currentPolySize);
                 idxNext = nextIdxNext;
+                nextHasMoved = true;
             }
+
+            //std::cout << "idxCurrent: " << idxCurrent << ", idxNext: " << idxNext << std::endl;
         } while (idxCurrent != startIdxCurrent || idxNext != startIdxNext);
 
         std::cout << "offset:" << offset << std::endl;

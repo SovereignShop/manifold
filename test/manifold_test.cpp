@@ -231,8 +231,8 @@ TEST(Manifold, Loft) {
   glm::mat4x3 mat2 = MatrixTransforms::Translate(glm::mat4x3(1), {0, 0, 12});
   glm::mat4x3 mat3 = MatrixTransforms::Translate(glm::mat4x3(1), {0, 0, 24});
   CrossSection square = CrossSection::Square({20, 20}, true);
-  CrossSection circle = CrossSection::Circle(14, 20);
-  Manifold ret = Manifold::Loft({square.ToPolygons(), circle.ToPolygons()}, {mat2, mat3});
+  CrossSection circle = CrossSection::Circle(18, 20);
+  Manifold ret = Manifold::Loft({square.ToPolygons(), circle.ToPolygons(), square.ToPolygons()}, {mat1, mat2, mat3});
   auto props = ret.GetProperties();
   ExportMesh("loft.glb", ret.GetMesh(), {});
   std::cout << "volume:" << props.volume << std::endl;
