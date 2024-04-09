@@ -129,8 +129,17 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           }
 
           vertPos.insert(vertPos.end(), botTransformed.begin(), botTransformed.end());
+
+          float minDistance = std::numeric_limits<float>::max();
           size_t botStartVertOffset = 0,
             topStartVertOffset = 0;
+          for (size_t j = 0; j < topTransformed.size(); ++j) {
+            float dist = glm::distance(botTransformed[0], topTransformed[j]);
+            if (dist < minDistance) {
+              minDistance = dist;
+              topStartVertOffset = j;
+            }
+          }
 
           bool botHasMoved = false,
             topHasMoved = false;
