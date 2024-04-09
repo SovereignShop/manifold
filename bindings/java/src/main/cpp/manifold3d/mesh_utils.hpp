@@ -82,6 +82,48 @@ enum class LoftAlgorithm: long {
    Isomorphic
 };
 
+glm::vec2 calculatePolygonCentroid(const std::vector<glm::vec2>& vertices) {
+    if (vertices.size() < 3) {
+        throw std::invalid_argument("A polygon must have at least 3 vertices.");
+    }
+
+    double centroidX = 0.0;
+    double centroidY = 0.0;
+    double signedArea = 0.0;
+    double x0 = 0.0;
+    double y0 = 0.0;
+    double x1 = 0.0;
+    double y1 = 0.0;
+    double a = 0.0;  // Partial signed area
+
+    size_t i = 0;
+    for (i = 0; i < vertices.size() - 1; ++i) {
+        x0 = vertices[i].x;
+        y0 = vertices[i].y;
+        x1 = vertices[i+1].x;
+        y1 = vertices[i+1].y;
+        a = x0*y1 - x1*y0;
+        signedArea += a;
+        centroidX += (x0 + x1) * a;
+        centroidY += (y0 + y1) * a;
+    }
+
+    x0 = vertices[i].x;
+    y0 = vertices[i].y;
+    x1 = vertices[0].x;
+    y1 = vertices[0].y;
+    a = x0*y1 - x1*y0;
+    signedArea += a;
+    centroidX += (x0 + x1) * a;
+    centroidY += (y0 + y1) * a;
+
+    signedArea *= 0.5;
+    centroidX /= (6.0 * signedArea);
+    centroidY /= (6.0 * signedArea);
+
+    return glm::vec2(centroidX, centroidY);
+}
+
 manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
     if (sections.size() != transforms.size()) {
       throw std::runtime_error("Mismatched number of sections and transforms");
@@ -121,9 +163,14 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           std::vector<glm::vec3> botTransformed;
           std::vector<glm::vec3> topTransformed;
 
+          glm::vec2 botCentroid = calculatePolygonCentroid(botPolygon);
+          glm::vec2 topCentroid = calculatePolygonCentroid(topPolygon);
+          glm::vec2 centroidOffset = topCentroid - botCentroid;
+
           for (const auto& vertex : botPolygon) {
               botTransformed.push_back(MatrixTransforms::Translate(currentTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
           }
+
           for (const auto& vertex : topPolygon) {
               topTransformed.push_back(MatrixTransforms::Translate(nextTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
           }
@@ -133,8 +180,8 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           float minDistance = std::numeric_limits<float>::max();
           size_t botStartVertOffset = 0,
             topStartVertOffset = 0;
-          for (size_t j = 0; j < topTransformed.size(); ++j) {
-            float dist = glm::distance(botTransformed[0], topTransformed[j]);
+          for (size_t j = 0; j < topPolygon.size(); ++j) {
+            float dist = glm::distance(botPolygon[0], topPolygon[j] - centroidOffset);
             if (dist < minDistance) {
               minDistance = dist;
               topStartVertOffset = j;
@@ -149,9 +196,9 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
               size_t botNextVertOffset = (botVertOffset + 1) % botTransformed.size();
               size_t topNextVertOffset = (topVertOffset + 1) % topTransformed.size();
 
-              float distBotNextToTop = glm::distance(botTransformed[botNextVertOffset], topTransformed[topVertOffset]);
-              float distBotToTopNext = glm::distance(botTransformed[botVertOffset], topTransformed[topNextVertOffset]);
-              float distBotNextToTopNext = glm::distance(botTransformed[botNextVertOffset], topTransformed[topNextVertOffset]);
+              float distBotNextToTop = glm::distance(botPolygon[botNextVertOffset], topPolygon[topVertOffset] - centroidOffset);
+              float distBotToTopNext = glm::distance(botPolygon[botVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
+              float distBotNextToTopNext = glm::distance(botPolygon[botNextVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
 
               bool botHasNext = botNextVertOffset != (botStartVertOffset + 1) % botTransformed.size() || !botHasMoved;
               bool topHasNext = topNextVertOffset != (topStartVertOffset + 1) % topTransformed.size() || !topHasMoved;

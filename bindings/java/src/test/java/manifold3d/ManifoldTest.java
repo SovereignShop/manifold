@@ -48,8 +48,10 @@ public class ManifoldTest {
         MeshIO.ExportMesh("hull.glb", hullMesh, opts);
         assert hull.getProperties().volume() > 0.0;
 
-        DoubleMat4x3 frame1 = new DoubleMat4x3(1);
-        DoubleMat4x3 frame2 = new DoubleMat4x3(1).translate(new DoubleVec3(0, 0, 20));
+        DoubleMat4x3 frame1 = new DoubleMat4x3(1).translate(new DoubleVec3(20, 0, 0));
+        DoubleMat4x3 frame2 = new DoubleMat4x3(1)
+                .rotate(new DoubleVec3(0, -3.14, 0))
+                .translate(new DoubleVec3(20, 0, 0));
         CrossSection section1 = CrossSection.Square(new DoubleVec2(20, 20), true);
         CrossSection section2 = CrossSection.Circle(15, 20);
         Manifold loft = MeshUtils.Loft(new CrossSectionVector(section1, section2),
