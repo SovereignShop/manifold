@@ -132,24 +132,34 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
       throw std::runtime_error("Loft requires at least two sections.");
     }
 
+    size_t nVerts = 0;
+    std::vector<size_t> sectionSizes;
+    sectionSizes.reserve(sections.size());
+    for (auto& section: sections) {
+        size_t sectionSize = 0;
+        for (auto& poly: section) {
+            sectionSize += poly.size();
+        }
+        nVerts += sectionSize;
+        sectionSizes.push_back(sectionSize);
+    }
+
     std::vector<glm::vec3> vertPos;
+    vertPos.reserve(nVerts);
     std::vector<glm::ivec3> triVerts;
+    triVerts.reserve(2*nVerts);
 
     size_t botSectionOffset = 0;
     for (std::size_t i = 0; i < sections.size() - 1; ++i) {
         const manifold::Polygons& botPolygons = sections[i];
         const manifold::Polygons& topPolygons = sections[i + 1];
-        const glm::mat4x3& currentTransform = transforms[i];
-        const glm::mat4x3& nextTransform = transforms[i + 1];
+        const glm::mat4x3& botTransform = transforms[i];
 
         if (botPolygons.size() != topPolygons.size()) {
           throw std::runtime_error("Cross sections must be composed of euqal number of polygons.");
         }
 
-        size_t botSectionSize = 0;
-        for (auto& poly : botPolygons)
-          botSectionSize += poly.size();
-
+        size_t botSectionSize = sectionSizes[i];
         size_t topSectionOffset = botSectionOffset + botSectionSize;
 
         size_t botPolyOffset = 0;
@@ -160,22 +170,13 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           auto botPolygon = *currPolyIt;
           auto topPolygon = *nextPolyIt;
 
-          std::vector<glm::vec3> botTransformed;
-          std::vector<glm::vec3> topTransformed;
-
           glm::vec2 botCentroid = calculatePolygonCentroid(botPolygon);
           glm::vec2 topCentroid = calculatePolygonCentroid(topPolygon);
           glm::vec2 centroidOffset = topCentroid - botCentroid;
 
           for (const auto& vertex : botPolygon) {
-              botTransformed.push_back(MatrixTransforms::Translate(currentTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+              vertPos.push_back(MatrixTransforms::Translate(botTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
           }
-
-          for (const auto& vertex : topPolygon) {
-              topTransformed.push_back(MatrixTransforms::Translate(nextTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
-          }
-
-          vertPos.insert(vertPos.end(), botTransformed.begin(), botTransformed.end());
 
           float minDistance = std::numeric_limits<float>::max();
           size_t botStartVertOffset = 0,
@@ -193,15 +194,15 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           size_t botVertOffset = botStartVertOffset,
             topVertOffset = topStartVertOffset;
           do {
-              size_t botNextVertOffset = (botVertOffset + 1) % botTransformed.size();
-              size_t topNextVertOffset = (topVertOffset + 1) % topTransformed.size();
+              size_t botNextVertOffset = (botVertOffset + 1) % botPolygon.size();
+              size_t topNextVertOffset = (topVertOffset + 1) % topPolygon.size();
 
               float distBotNextToTop = glm::distance(botPolygon[botNextVertOffset], topPolygon[topVertOffset] - centroidOffset);
               float distBotToTopNext = glm::distance(botPolygon[botVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
               float distBotNextToTopNext = glm::distance(botPolygon[botNextVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
 
-              bool botHasNext = botNextVertOffset != (botStartVertOffset + 1) % botTransformed.size() || !botHasMoved;
-              bool topHasNext = topNextVertOffset != (topStartVertOffset + 1) % topTransformed.size() || !topHasMoved;
+              bool botHasNext = botNextVertOffset != (botStartVertOffset + 1) % botPolygon.size() || !botHasMoved;
+              bool topHasNext = topNextVertOffset != (topStartVertOffset + 1) % topPolygon.size() || !topHasMoved;
 
               if (distBotNextToTopNext < distBotNextToTop && distBotNextToTopNext <= distBotToTopNext && botHasNext && topHasNext) {
                   triVerts.emplace_back(botSectionOffset + botPolyOffset + botVertOffset,
@@ -354,7 +355,7 @@ manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const s
 
 manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<glm::mat4x3>& transforms) {
     std::vector<manifold::Polygons> polys;
-    for (auto section : sections) {
+    for (auto& section : sections) {
         polys.push_back({section});
     }
     return Loft(polys, transforms);
@@ -362,7 +363,7 @@ manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<gl
 
 manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
     std::vector<manifold::Polygons> polys;
-    for (auto section : sections) {
+    for (auto& section : sections) {
         polys.push_back({section});
     }
     return Loft(polys, transforms, algorithm);
