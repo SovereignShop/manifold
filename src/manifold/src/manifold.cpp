@@ -446,11 +446,13 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
 
   glm::vec3 startVert =  vertPos[startHalfedge.startVert];
   glm::vec3 endVert = vertPos[startHalfedge.endVert];
-  glm::vec3 dir = glm::normalize(endVert - startVert);
 
-  cout << "startVert: " << startVert.x << " " << startVert.y << " " << startVert.z << endl;
-  cout << "endVert: " << endVert.x << " " << endVert.y << " " << endVert.z << endl;
-  cout << "Direction: " << dir.x << " " << dir.y << " " << dir.z << endl;
+
+  int currHalfedge = 6;
+  int nextHalfedge = (3 * (currHalfedge / 3)) + ((currHalfedge + 1) % 3);
+  int nnextHalfedge = (3 * (nextHalfedge / 3)) + ((nextHalfedge + 1) % 3);
+
+  cout << "edges:" << currHalfedge << " " << nextHalfedge << " " << nnextHalfedge << endl;
 
   // How about we start with edge hopping. We calculate the angle betweeen the "desired heading"
   // the the max and min angle that intersect that edge. If so, we find the intersection point.
@@ -458,12 +460,6 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   // halfedge index and "wrap" around if we have to.
 
   // 1. Iterate around half edges from any starting point
-
-  int startIndex = 4;
-  for (int i = startIndex; i < startIndex+3; i++) {
-    int idx = (i % 3) + startIndex;
-
-  }
 
   // int face = startHalfedge.face;
   // glm::vec3 faceNormal = impl->faceNormal_[face];
