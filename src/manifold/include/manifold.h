@@ -193,6 +193,7 @@ class Manifold {
   ///@{
   Mesh GetMesh() const;
   MeshGL GetMeshGL(glm::ivec3 normalIdx = glm::ivec3(0)) const;
+  std::vector<glm::mat4x3> surfaceMap(const std::vector<glm::mat4x3>& transforms) const;
   bool IsEmpty() const;
   enum class Error {
     NoError,

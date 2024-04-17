@@ -199,6 +199,11 @@ TEST(Manifold, ExtrudeCone) {
   EXPECT_FLOAT_EQ(donut.GetProperties().volume, 4.0f);
 }
 
+TEST(Manifold, surfaceMap) {
+  Manifold cube = Manifold::Cube({10, 10, 10}, false);
+  vector<glm::mat4x3> ret = cube.surfaceMap({});
+}
+
 Polygons RotatePolygons(Polygons polys, const int index) {
   Polygons rotatedPolys;
   for (auto& polygon : polys) {

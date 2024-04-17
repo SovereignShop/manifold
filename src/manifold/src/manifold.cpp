@@ -21,6 +21,7 @@
 #include "csg_tree.h"
 #include "impl.h"
 #include "par.h"
+#include "iostream"
 
 namespace {
 using namespace manifold;
@@ -346,6 +347,129 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
     }
   }
   return out;
+}
+
+
+bool lineIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4, glm::vec2 &intersection) {
+    glm::vec2 s1 = p2 - p1;
+    glm::vec2 s2 = p4 - p3;
+
+    float s, t;
+    s = (-s1.y * (p1.x - p3.x) + s1.x * (p1.y - p3.y)) / (-s2.x * s1.y + s1.x * s2.y);
+    t = ( s2.x * (p1.y - p3.y) - s2.y * (p1.x - p3.x)) / (-s2.x * s1.y + s1.x * s2.y);
+
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+        intersection = p1 + (t * s1);
+        return true;
+    }
+
+    return false; // No collision
+}
+/*
+ *  Project sequence of transforms onto manifold, preserving local distances. X/Y plane is mapped
+ *  to the surface of the manifold. Z is mapped the normal to the surface.
+ *
+ *  */
+std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& transforms) const {
+  auto impl = GetCsgLeafNode().GetImpl();
+  const Vec<Halfedge>& halfedges = impl->halfedge_;
+  const Halfedge& halfedge = halfedges[0];
+  bool sameFace = (halfedge.face == halfedges[1].face) && (halfedge.face == halfedges[2].face);
+  std::cout << "same face: " << sameFace << std::endl;
+
+  auto faceHalfeges = [halfedges](int idx) -> std::vector<int> {
+    if (idx == 0) {
+      return {idx, idx+1, idx+2};
+    } else if (halfedges[idx-1].face == halfedges[idx].face) {
+      if (idx == 1){
+        return {idx-1, idx, idx+1};
+      } else if (halfedges[idx-2].face == halfedges[idx].face) {
+        return {idx-2, idx-1, idx};
+      } else {
+        return {idx-1, idx, idx+1};
+      }
+    } else {
+      return {idx, idx+1, idx+2};
+    }
+  };
+
+  auto lineIntersect = [](glm::vec2 p1, glm::vec2 dir1, glm::vec2 p2, glm::vec2 p3) -> bool {
+    glm::vec2 dir2 = p3 - p2;
+
+    float denom = -dir2.x * dir1.y + dir1.x * dir2.y;
+    if (std::abs(denom) < 1e-8) {
+        return std::numeric_limits<float>::infinity();  // Lines are parallel
+    }
+
+    float s = (-dir1.y * (p1.x - p2.x) + dir1.x * (p1.y - p2.y)) / denom;
+    float t = (dir2.x * (p1.y - p2.y) - dir2.y * (p1.x - p2.x)) / denom;
+
+    if (t >= 0.0 && s >= 0.0 && s <= 1.0) {
+        glm::vec2 intersection = p1 + t * dir1;
+        if (glm::all(glm::greaterThanEqual(intersection, glm::min(p2, p3))) && glm::all(glm::lessThanEqual(intersection, glm::max(p2, p3)))) {
+            return glm::length(intersection - p1);
+        }
+    }
+    return std::numeric_limits<float>::infinity();
+  };
+
+  auto vectorIntersetTriangle = [lineIntersect](glm::vec2 v1, glm::vec2 v2, glm::vec2 v3, glm::vec2 point, glm::vec2 direction) -> float {
+    float minDist = std::numeric_limits<float>::infinity();
+
+    float minDistance = std::numeric_limits<float>::infinity();
+    glm::vec2 nearestIntersection;
+
+    // Check each triangle edge
+    std::vector<std::pair<glm::vec2, glm::vec2>> edges = {{v1, v2}, {v2, v3}, {v3, v1}};
+    for (const auto& edge : edges) {
+        float dist = lineIntersect(point, direction, edge.first, edge.second);
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearestIntersection = point + glm::normalize(direction) * dist;
+        }
+    }
+
+    return minDist;
+  };
+
+  for (int i = 0; i < halfedges.size(); i++) {
+    auto ids = faceHalfeges(i);
+    cout << "FACE IDS:";
+    for (auto id : ids) {
+      cout << halfedges[id].face << " ";
+    }
+    cout << endl;
+  }
+
+  auto& vertPos = impl->vertPos_;
+  auto& startHalfedge = halfedges[4];
+
+  glm::vec3 startVert =  vertPos[startHalfedge.startVert];
+  glm::vec3 endVert = vertPos[startHalfedge.endVert];
+  glm::vec3 dir = glm::normalize(endVert - startVert);
+
+  cout << "startVert: " << startVert.x << " " << startVert.y << " " << startVert.z << endl;
+  cout << "endVert: " << endVert.x << " " << endVert.y << " " << endVert.z << endl;
+  cout << "Direction: " << dir.x << " " << dir.y << " " << dir.z << endl;
+
+  // How about we start with edge hopping. We calculate the angle betweeen the "desired heading"
+  // the the max and min angle that intersect that edge. If so, we find the intersection point.
+  // The we find the other halfedge pair associated with that edge. We just increment the current
+  // halfedge index and "wrap" around if we have to.
+
+  // 1. Iterate around half edges from any starting point
+
+  int startIndex = 4;
+  for (int i = startIndex; i < startIndex+3; i++) {
+    int idx = (i % 3) + startIndex;
+
+  }
+
+  // int face = startHalfedge.face;
+  // glm::vec3 faceNormal = impl->faceNormal_[face];
+
+  std::vector<glm::mat4x3> ret;
+  return ret;
 }
 
 /**
