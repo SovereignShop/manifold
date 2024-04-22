@@ -201,7 +201,8 @@ TEST(Manifold, ExtrudeCone) {
 
 TEST(Manifold, surfaceMap) {
   Manifold cube = Manifold::Cube({10, 10, 10}, false);
-  vector<glm::mat4x3> ret = cube.surfaceMap({});
+  glm::mat4x3 transform = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {1.65, 0, 5}};
+  vector<glm::mat4x3> ret = cube.surfaceMap({transform});
 }
 
 Polygons RotatePolygons(Polygons polys, const int index) {

@@ -19,9 +19,11 @@
 #include "QuickHull.hpp"
 #include "boolean3.h"
 #include "csg_tree.h"
+#include "glm/ext/quaternion_geometric.hpp"
 #include "impl.h"
 #include "par.h"
 #include "iostream"
+#include "matrix_transforms.hpp"
 
 namespace {
 using namespace manifold;
@@ -350,21 +352,6 @@ MeshGL Manifold::GetMeshGL(glm::ivec3 normalIdx) const {
 }
 
 
-bool lineIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4, glm::vec2 &intersection) {
-    glm::vec2 s1 = p2 - p1;
-    glm::vec2 s2 = p4 - p3;
-
-    float s, t;
-    s = (-s1.y * (p1.x - p3.x) + s1.x * (p1.y - p3.y)) / (-s2.x * s1.y + s1.x * s2.y);
-    t = ( s2.x * (p1.y - p3.y) - s2.y * (p1.x - p3.x)) / (-s2.x * s1.y + s1.x * s2.y);
-
-    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
-        intersection = p1 + (t * s1);
-        return true;
-    }
-
-    return false; // No collision
-}
 /*
  *  Project sequence of transforms onto manifold, preserving local distances. X/Y plane is mapped
  *  to the surface of the manifold. Z is mapped the normal to the surface.
@@ -393,7 +380,7 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
     }
   };
 
-  auto lineIntersect = [](glm::vec2 p1, glm::vec2 dir1, glm::vec2 p2, glm::vec2 p3) -> bool {
+  auto lineIntersect = [](glm::vec2 p1, glm::vec2 dir1, glm::vec2 p2, glm::vec2 p3) -> float {
     glm::vec2 dir2 = p3 - p2;
 
     float denom = -dir2.x * dir1.y + dir1.x * dir2.y;
@@ -432,34 +419,177 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
     return minDist;
   };
 
-  for (int i = 0; i < halfedges.size(); i++) {
-    auto ids = faceHalfeges(i);
-    cout << "FACE IDS:";
-    for (auto id : ids) {
-      cout << halfedges[id].face << " ";
-    }
-    cout << endl;
-  }
+  auto angleBetweenVectors = [](glm::vec3 v1, glm::vec3 v2) -> float {
+    return glm::acos(glm::dot(v1, v2) / (glm::length(v1) * glm::length(v2)));
+  };
+
+  // for (int i = 0; i < halfedges.size(); i++) {
+  //   auto ids = faceHalfeges(i);
+  //   cout << "FACE IDS:";
+  //   for (auto id : ids) {
+  //     cout << halfedges[id].face << " ";
+  //   }
+  //   cout << endl;
+  // }
+
+  auto crossProduct = [](glm::vec3 v1, glm::vec3 v2) -> glm::vec3 {
+    return glm::vec3(v1.y * v2.z - v1.z * v2.y,
+                     v1.z * v2.x - v1.x * v2.z,
+                     v1.x * v2.y - v1.y * v2.x);
+  };
+
+  auto crossProductZ = [](glm::vec3 v1, glm::vec3 v2) -> float {
+    return v1.x * v2.y - v1.y * v2.x;
+  };
+
+  auto crossProductY = [](glm::vec3 v1, glm::vec3 v2) -> float {
+    return v1.z * v2.x - v1.x * v2.z;
+  };
+
+  //auto intersectionDistance = [](const glm::vec3& p1, const glm::vec3& d1, const glm::vec3& p2, const glm::vec3& d2) -> float {
+  //    glm::vec3 dp = p2 - p1;
+  //    glm::vec3 d1xd2 = glm::cross(d1, d2);
+
+  //    // Check for coplanarity
+  //    if (glm::length(glm::cross(d1xd2, dp)) > 1e-7) {  // Use a small epsilon for floating-point precision issues
+  //        std::cerr << "Lines are not coplanar: " << glm::length(glm::cross(d1xd2, dp))  << std::endl;
+  //        return std::numeric_limits<float>::quiet_NaN(); // Return NaN to indicate no valid intersection
+  //    }
+
+  //    // Solve for t and s
+  //    if (glm::length(d1xd2) < 1e-7) {
+  //        std::cerr << "Lines are parallel or collinear." << std::endl;
+  //        return std::numeric_limits<float>::quiet_NaN(); // Return NaN for parallel or collinear
+  //    }
+
+  //    float t = glm::dot(glm::cross(dp, d2), d1xd2) / glm::dot(d1xd2, d1xd2);
+
+  //    // Return distance to intersection point along d1
+  //    return glm::length(t * d1);
+  //};
+
+  auto intersectionDistance = [](const glm::vec3& p1, const glm::vec3& d1, const glm::vec3& p2, const glm::vec3& d2, const glm::vec3& faceNormal) -> float {
+      glm::vec3 dp = p2 - p1;
+      glm::vec3 d1xd2 = glm::cross(d1, d2);
+
+      // Solve for t (distance along d1 to the intersection point)
+      float t = glm::dot(glm::cross(dp, d2), faceNormal) / glm::dot(glm::cross(d1, d2), faceNormal);
+
+      // Check if the point of intersection is valid (not resulting from parallel lines)
+      if (glm::length(d1xd2) < 1e-7) {
+          std::cerr << "Lines are parallel or collinear." << std::endl;
+          return std::numeric_limits<float>::quiet_NaN(); // Return NaN for parallel or collinear lines
+      }
+
+      // Return distance to intersection point along d1
+      return glm::length(t * d1);
+  };
+
+
 
   auto& vertPos = impl->vertPos_;
-  auto& startHalfedge = halfedges[4];
+  auto& startHalfedge = halfedges[0];
+
+  int currHalfedgeIdx = 0;
+  int nextHalfedgeIdx = (3 * (currHalfedgeIdx / 3)) + ((currHalfedgeIdx + 1) % 3);
+  int nnextHalfedgeIdx = (3 * (nextHalfedgeIdx / 3)) + ((nextHalfedgeIdx + 1) % 3);
 
   glm::vec3 startVert =  vertPos[startHalfedge.startVert];
   glm::vec3 endVert = vertPos[startHalfedge.endVert];
 
+  glm::mat4x3 transform = transforms[0];
 
-  int currHalfedge = 6;
-  int nextHalfedge = (3 * (currHalfedge / 3)) + ((currHalfedge + 1) % 3);
-  int nnextHalfedge = (3 * (nextHalfedge / 3)) + ((nextHalfedge + 1) % 3);
+  // 1. Find side of the edge the transform points to
 
-  cout << "edges:" << currHalfedge << " " << nextHalfedge << " " << nnextHalfedge << endl;
+  glm::vec3 tfXDir = transform[0];
+  glm::vec3 halfEdgeDir = glm::normalize(endVert - startVert);
+  float angle = angleBetweenVectors(tfXDir, halfEdgeDir);
 
-  // How about we start with edge hopping. We calculate the angle betweeen the "desired heading"
-  // the the max and min angle that intersect that edge. If so, we find the intersection point.
-  // The we find the other halfedge pair associated with that edge. We just increment the current
-  // halfedge index and "wrap" around if we have to.
+  float cross = crossProductY(tfXDir, halfEdgeDir);
 
-  // 1. Iterate around half edges from any starting point
+  cout << "angle: " << angle << endl;
+  cout << "crossProductY: " << cross << endl;
+  cout << "halfedge dir: " << halfEdgeDir.x << " " << halfEdgeDir.y << " " << halfEdgeDir.z << endl;
+
+  float farVertexAngle = angleBetweenVectors(halfEdgeDir, vertPos[halfedges[nextHalfedgeIdx].endVert] - transform[3]);
+  cout << "farVertexAngle: " << farVertexAngle << endl;
+
+  // if (angle < farVertexAngle) {
+  //   cout << "vector intersects second edge." << endl;
+  // } else {
+  //   cout << "vector intersects third edge." << endl;
+  //   auto currVert = vertPos[halfedges[currHalfedgeIdx].startVert];
+  //   auto nextVert = vertPos[halfedges[nextHalfedgeIdx].startVert];
+  //   auto nnextVert = vertPos[halfedges[nnextHalfedgeIdx].startVert];
+
+  //   float distToCurrVert = -glm::length(currVert - transform[3]);
+  //   float angleToCurrVert = angleBetweenVectors(tfXDir, currVert - transform[3]);
+
+  //   glm::vec2 currVert2D = {
+  //     distToCurrVert * glm::cos(angleToCurrVert),
+  //     distToCurrVert * glm::sin(angleToCurrVert)
+  //   };
+
+  //   float distToNextVert = glm::length(nextVert - transform[3]);
+  //   float angleToNextVert = angleBetweenVectors(tfXDir, nextVert - transform[3]);
+
+  //   glm::vec2 nextVert2D = {
+  //     distToNextVert * glm::cos(angleToNextVert),
+  //     distToNextVert * glm::sin(angleToNextVert)
+  //   };
+
+  //   float distToNNextVert = glm::length(nnextVert - transform[3]);
+  //   float angleToNNextVert = angleBetweenVectors(tfXDir, nnextVert - transform[3]);
+
+  //   glm::vec2 nNextVert2D = {
+  //     distToNNextVert * glm::cos(-angleToNNextVert),
+  //     distToNNextVert * glm::sin(-angleToNNextVert)
+  //   };
+
+  //   float intersection = lineIntersect({0, 0}, {0, 1}, nextVert2D, nNextVert2D - nextVert2D);
+
+  //   cout << "intersection: " << intersection << endl;
+
+  //   cout << "distToNNextVert: " << distToNNextVert << endl;
+  //   cout << "angleToNNextVert: " << angleToNNextVert << endl;
+  //   cout << "currVert2D: " << currVert2D.x << " " << currVert2D.y << endl;
+  //   cout << "nextVert2D: " << nextVert2D.x << " " << nextVert2D.y << endl;
+  //   cout << "nNextVert2D: " << nNextVert2D.x << " " << nNextVert2D.y << endl;
+
+  // }
+
+  glm::vec3 faceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
+
+  glm::vec3 v1 = vertPos[halfedges[currHalfedgeIdx].endVert];
+  glm::vec3 v2 = vertPos[halfedges[nextHalfedgeIdx].endVert];
+  glm::vec3 v3 = vertPos[halfedges[nnextHalfedgeIdx].endVert];
+
+  glm::vec3 P = transform[3];
+
+  glm::vec3 v1P = v1 - P;
+  glm::vec3 v2P = v2 - P;
+  glm::vec3 v3P = v3 - P;
+
+  float v1v2Angle = angleBetweenVectors(v1P, v2P);
+  float v1DirX = angleBetweenVectors(v1P, tfXDir);
+  float crossY = crossProductY(v1P, tfXDir);
+
+  if (crossY < 0) {
+    if (v1DirX < v1v2Angle) {
+      float dist = intersectionDistance(P, tfXDir, v2, glm::normalize(v3 - v2), faceNormal);
+      cout << "vector intersects second edge at: " << dist << endl;
+    } else {
+      float dist = intersectionDistance(P, tfXDir, v2, glm::normalize(v3 - v2), faceNormal);
+      cout << "vector intersects third edge at: " << dist << endl;
+      int nextFaceHalfedge = halfedges[nnextHalfedgeIdx].pairedHalfedge;
+      glm::vec3 nextFaceNormal = impl->faceNormal_[halfedges[nextFaceHalfedge].face];
+      cout << "normals: " << faceNormal.x << " " << faceNormal.y << " " << faceNormal.z << endl;
+      cout << "nextFaceNormal: " << nextFaceNormal.x << " " << nextFaceNormal.y << " " << nextFaceNormal.z << endl;
+      int nextFace = halfedges[nextFaceHalfedge].face;
+    }
+  } else {
+    cout << "Counter-Clockwise: " << crossY << endl;
+  }
 
   // int face = startHalfedge.face;
   // glm::vec3 faceNormal = impl->faceNormal_[face];
