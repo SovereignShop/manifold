@@ -276,6 +276,7 @@ class Manifold {
    */
   ///@{
   CrossSection Slice(float height = 0) const;
+  std::vector<CrossSection> Slices(float bottomZ, float topZ, int nSlices) const;
   CrossSection Project() const;
   ///@}
 

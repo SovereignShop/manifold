@@ -889,6 +889,11 @@ CrossSection Manifold::Slice(float height) const {
   return GetCsgLeafNode().GetImpl()->Slice(height);
 }
 
+std::vector<CrossSection> Manifold::Slices(float bottomZ, float topZ, int nSlices) const {
+  return GetCsgLeafNode().GetImpl()->Slices(bottomZ, topZ, nSlices);
+
+}
+
 /**
  * Returns a cross section representing the projected outline of this object
  * onto the X-Y plane.

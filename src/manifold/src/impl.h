@@ -143,6 +143,7 @@ struct Manifold::Impl {
                             VecView<Halfedge>::IterC end,
                             glm::mat3x2 projection) const;
   CrossSection Slice(float height) const;
+  std::vector<CrossSection> Slices(float bottomZ, float topZ, int nSlices) const;
   CrossSection Project() const;
 
   // edge_op.cu
