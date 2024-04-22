@@ -111,6 +111,12 @@ glm::mat4x3 Translate(const glm::mat4x3& m, const glm::vec3& offset) {
     return result;
 }
 
+glm::mat4x3 TranslateX(const glm::mat4x3& m, float offset) {
+    glm::mat4x3 result = m;
+    result[3] += m[0]*offset;
+    return result;
+}
+
 glm::mat3x2 Translate(const glm::mat3x2& m, const glm::vec2& offset) {
     glm::mat3x2 result = m;
 
