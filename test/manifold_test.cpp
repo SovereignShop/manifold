@@ -204,7 +204,9 @@ TEST(Manifold, surfaceMap) {
   glm::mat4x3 transform1 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {1.65, 0, 5}};
   glm::mat4x3 transform2 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {7.0, 0, 5}};
   glm::mat4x3 transform3 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {9.0, 0, 5}};
-  vector<glm::mat4x3> ret = cube.surfaceMap({transform1, transform2, transform3});
+  glm::mat4x3 transform4 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {9.5, 0, 5}};
+  glm::mat4x3 transform5 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {9.8, 0, 5}};
+  vector<glm::mat4x3> ret = cube.surfaceMap({transform1, transform2, transform3, transform4, transform5});
 }
 
 Polygons RotatePolygons(Polygons polys, const int index) {

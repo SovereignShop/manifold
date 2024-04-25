@@ -529,14 +529,10 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
       for (int halfEdgeIdx : edges) {
         glm::vec3 startVert = vertPos[halfedges[halfEdgeIdx].startVert];
         glm::vec3 endVert = vertPos[halfedges[halfEdgeIdx].endVert];
-        // cout << "startVert: " << startVert.x << " " << startVert.y << " " << startVert.z << endl;
-        // cout << "endVert: " << endVert.x << " " << endVert.y << " " << endVert.z << endl;
-        // cout << "tfPos: " << tfPos.x << " " << tfPos.y << " " << tfPos.z << endl;
-        // cout << "tfDirX" << tfDirX.x << " " << tfDirX.y << " " << tfDirX.z << endl;
 
         float intersectDist = intersectionDistance(tfPos, tfDirX, startVert, glm::normalize(endVert - startVert), faceNormal);
         if (intersectDist > 0.0001 && intersectDist < std::numeric_limits<float>::max() && intersectDist < minDistance) {
-          cout << "minDistance: " << minDistance << " intersectDist: " << intersectDist << endl;
+          cout << "minDistance: " << minDistance << ", intersectDist: " << intersectDist << endl;
           minDistance = intersectDist;
           nearestHalfEdgeIdx = halfEdgeIdx;
           found = true;
@@ -551,8 +547,9 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
         currTf = MatrixTransforms::TranslateX(currTf, minDistance);
         result.push_back(currTf);
         currHalfedgeIdx = halfedges[nnextHalfedgeIdx].pairedHalfedge;
-        cout << "halfedge idx: " << currHalfedgeIdx << endl;
         currManifoldDist += minDistance;
+        currTfIdx += 1;
+        currTf = transforms[currTfIdx];
       } else {
         cout << "next TF on current face" << endl;
         cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
@@ -564,6 +561,7 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
     }
   } while (currTfIdx < transforms.size() - 1);
 
+  result.push_back(transforms[transforms.size() - 1]);
   for (auto& tf: result) {
     cout << "tf pos: " << tf[3].x << " " << tf[3].y << " " << tf[3].z << endl;
   }
