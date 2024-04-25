@@ -474,13 +474,8 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
       float t = glm::dot(glm::cross(dp, d2), faceNormal) / glm::dot(glm::cross(d1, d2), faceNormal);
 
       // Check if the point of intersection is valid (not resulting from parallel lines)
-      if (glm::length(d1xd2) < 1e-7) {
-          std::cerr << "Lines are parallel or collinear." << std::endl;
-          cerr << "ERROR: D1: " << d1.x << " " << d1.y << " " << d1.z << endl;
-          cerr << "ERROR: V1: " << p1.x << " " << p1.y << " " << p1.z << endl;
-          cerr << "ERROR: D2: " << d2.x << " " << d2.y << " " << d2.z << endl;
-          cerr << "ERROR: V2: " << p2.x << " " << p2.y << " " << p2.z << endl;
-          throw std::runtime_error("ERROR: Lines are parallel or collinear.");
+      if (glm::length(d1xd2) < 1e-7 || t < 0) {
+          return std::numeric_limits<float>::max();
       }
 
       // Return distance to intersection point along d1
@@ -495,10 +490,10 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   result.push_back(transforms[currTfIdx]);
 
   int currHalfedgeIdx = 0;
+  glm::mat4x3 currTf = transforms[currTfIdx];
 
   do {
 
-    glm::mat4x3 currTf = transforms[currTfIdx];
     glm::mat4x3 nextTf = transforms[currTfIdx+1];
 
     glm::vec3 currPos = currTf[3];
@@ -514,54 +509,64 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
 
       glm::vec3 faceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
 
-      glm::vec3 v1 = vertPos[halfedges[currHalfedgeIdx].endVert];
-      glm::vec3 v2 = vertPos[halfedges[nextHalfedgeIdx].endVert];
-      glm::vec3 v3 = vertPos[halfedges[nnextHalfedgeIdx].endVert];
+      Halfedge h1 = halfedges[currHalfedgeIdx];
+      Halfedge h2 = halfedges[nextHalfedgeIdx];
+      Halfedge h3 = halfedges[nnextHalfedgeIdx];
+
+      glm::vec3 v1 = vertPos[h1.endVert];
+      glm::vec3 v2 = vertPos[h2.endVert];
+      glm::vec3 v3 = vertPos[h3.endVert];
 
       glm::vec3 tfPos = currTf[3];
       glm::vec3 tfDirX = currTf[0];
 
-      glm::vec3 v1P = v1 - tfPos;
-      glm::vec3 v2P = v2 - tfPos;
-      glm::vec3 v3P = v3 - tfPos;
+      glm::vec3 intersection;
+      std::vector<int> edges = {currHalfedgeIdx, nextHalfedgeIdx, nnextHalfedgeIdx};
+      float minDistance = std::numeric_limits<float>::max();
+      int nearestHalfEdgeIdx;
+      bool found = false;
 
-      cout << "V1: " << v1.x << " " << v1.y << " " << v1.z << endl;
-      cout << "V2: " << v2.x << " " << v2.y << " " << v2.z << endl;
-      cout << "V3: " << v3.x << " " << v3.y << " " << v3.z << endl;
+      for (int halfEdgeIdx : edges) {
+        glm::vec3 startVert = vertPos[halfedges[halfEdgeIdx].startVert];
+        glm::vec3 endVert = vertPos[halfedges[halfEdgeIdx].endVert];
+        // cout << "startVert: " << startVert.x << " " << startVert.y << " " << startVert.z << endl;
+        // cout << "endVert: " << endVert.x << " " << endVert.y << " " << endVert.z << endl;
+        // cout << "tfPos: " << tfPos.x << " " << tfPos.y << " " << tfPos.z << endl;
+        // cout << "tfDirX" << tfDirX.x << " " << tfDirX.y << " " << tfDirX.z << endl;
 
-      float v1v2Angle = angleBetweenVectors(v1P, v2P);
-      float v1DirX = angleBetweenVectors(v1P, tfDirX);
-      float crossY = crossProductY(v1P, tfDirX);
-
-      cout << "CROSS Y: " << crossY << endl;
-      cout << "v1v2Angle: " << v1v2Angle << endl;
-      cout << "v1DirX: " << v1DirX << endl;
-
-      if (crossY < 0) {
-        if (v1DirX < v1v2Angle) {
-          float currManifoldDist = intersectionDistance(tfPos, tfDirX, v2, glm::normalize(v3 - v2), faceNormal);
-          cout << "vector intersects second edge at: " << currManifoldDist << endl;
-        } else {
-          float dist = intersectionDistance(tfPos, tfDirX, v2, glm::normalize(v3 - v2), faceNormal);
-          cout << "vector intersects third edge at: " << dist << endl;
-          if (currManifoldDist + dist < currTfDist) {
-            cout << "next TF not on current face" << endl;
-            currTf = MatrixTransforms::TranslateX(currTf, dist);
-            result.push_back(currTf);
-            currHalfedgeIdx = halfedges[nnextHalfedgeIdx].pairedHalfedge;
-            currManifoldDist += dist;
-          } else {
-            cout << "next TF on current face" << endl;
-            result.push_back(currTf);
-            currTfIdx += 1;
-            break;
-          }
+        float intersectDist = intersectionDistance(tfPos, tfDirX, startVert, glm::normalize(endVert - startVert), faceNormal);
+        if (intersectDist > 0.0001 && intersectDist < std::numeric_limits<float>::max() && intersectDist < minDistance) {
+          cout << "minDistance: " << minDistance << " intersectDist: " << intersectDist << endl;
+          minDistance = intersectDist;
+          nearestHalfEdgeIdx = halfEdgeIdx;
+          found = true;
         }
+      }
+
+      cout << "Distance: " << minDistance << endl;
+
+      if (minDistance > 0.0001 && currManifoldDist + minDistance < currTfDist) {
+        cout << "next TF not on current face" << endl;
+        cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
+        currTf = MatrixTransforms::TranslateX(currTf, minDistance);
+        result.push_back(currTf);
+        currHalfedgeIdx = halfedges[nnextHalfedgeIdx].pairedHalfedge;
+        cout << "halfedge idx: " << currHalfedgeIdx << endl;
+        currManifoldDist += minDistance;
       } else {
-        cout << "Counter-Clockwise: " << crossY << endl;
+        cout << "next TF on current face" << endl;
+        cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
+        result.push_back(currTf);
+        currTfIdx += 1;
+        currTf = transforms[currTfIdx];
+        break;
       }
     }
   } while (currTfIdx < transforms.size() - 1);
+
+  for (auto& tf: result) {
+    cout << "tf pos: " << tf[3].x << " " << tf[3].y << " " << tf[3].z << endl;
+  }
 
   std::vector<glm::mat4x3> ret;
   return ret;
