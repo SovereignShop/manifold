@@ -19,6 +19,7 @@
 #include "QuickHull.hpp"
 #include "boolean3.h"
 #include "csg_tree.h"
+#include "glm/ext/matrix_float4x3.hpp"
 #include "glm/ext/quaternion_geometric.hpp"
 #include "impl.h"
 #include "par.h"
@@ -482,6 +483,18 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
       return glm::length(t * d1);
   };
 
+  auto toRelativeTfs = [](std::vector<glm::mat4x3> tfs) -> std::vector<glm::mat4x3> {
+    std::vector<glm::mat4x3> result;
+    result.push_back(tfs[0]);
+    for (int i = 0; i < tfs.size() - 1; i++) {
+      glm::mat4x3 inverse = MatrixTransforms::InvertTransform(tfs[i]);
+      glm::mat4x3 combined = MatrixTransforms::CombineTransforms(inverse, tfs[i+1]);
+      cout << " combined: " << combined[3].x << " " << combined[3].y << " " << combined[3].z << endl;
+      result.push_back(combined);
+    }
+    return result;
+  };
+
   auto& vertPos = impl->vertPos_;
 
   int currTfIdx = 0;
@@ -492,9 +505,16 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   int currHalfedgeIdx = 0;
   glm::mat4x3 currTf = transforms[currTfIdx];
 
+  std::vector<glm::mat4x3> tfs = toRelativeTfs(transforms);
+
+  for (auto& tf: tfs) {
+    cout << "tf pos: " << tf[3].x << " " << tf[3].y << " " << tf[3].z << endl;
+  }
+
   do {
 
-    glm::mat4x3 nextTf = transforms[currTfIdx+1];
+    glm::mat4x3 nextTf = MatrixTransforms::CombineTransforms(currTf, tfs[currTfIdx+1]);
+    cout << "POS: " << currTfIdx << "  " << nextTf[3].x << " " << nextTf[3].y << " " << nextTf[3].z << endl;
 
     glm::vec3 currPos = currTf[3];
     glm::vec3 nextPos = nextTf[3];
@@ -519,6 +539,7 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
 
       glm::vec3 tfPos = currTf[3];
       glm::vec3 tfDirX = currTf[0];
+      cout << "X DIR: " << tfDirX.x << " " << tfDirX.y << " " << tfDirX.z << endl;
 
       glm::vec3 intersection;
       std::vector<int> edges = {currHalfedgeIdx, nextHalfedgeIdx, nnextHalfedgeIdx};
@@ -543,25 +564,26 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
 
       if (minDistance > 0.0001 && currManifoldDist + minDistance < currTfDist) {
         cout << "next TF not on current face" << endl;
-        cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
+        cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << " XDIRY: " << tfDirX.y << endl;
         currTf = MatrixTransforms::TranslateX(currTf, minDistance);
         result.push_back(currTf);
         currHalfedgeIdx = halfedges[nnextHalfedgeIdx].pairedHalfedge;
         currManifoldDist += minDistance;
-        currTfIdx += 1;
-        currTf = transforms[currTfIdx];
+        glm::vec3 nextFaceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
+        float angle = (glm::pi<float>() / 2) - angleBetweenVectors(nextFaceNormal, currTf[1]);
+        cout << "angle: " << angle << endl;
+        currTf = MatrixTransforms::Yaw(currTf, angle);
       } else {
         cout << "next TF on current face" << endl;
         cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
-        result.push_back(currTf);
+        result.push_back(nextTf);
         currTfIdx += 1;
-        currTf = transforms[currTfIdx];
+        currTf = nextTf;
         break;
       }
     }
-  } while (currTfIdx < transforms.size() - 1);
+  } while (currTfIdx < tfs.size() - 1);
 
-  result.push_back(transforms[transforms.size() - 1]);
   for (auto& tf: result) {
     cout << "tf pos: " << tf[3].x << " " << tf[3].y << " " << tf[3].z << endl;
   }

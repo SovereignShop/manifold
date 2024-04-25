@@ -165,6 +165,7 @@ glm::mat4x3 InvertTransform(const glm::mat4x3& m) {
 
   glm::mat3x3 rotationPart = glm::mat3x3(m);
   glm::mat4x3 unRotated = SetRotation(m, glm::transpose(rotationPart));
+  unRotated[3] = {0, 0, 0};
 
   glm::vec3 translation = -m[3];
   glm::mat4x3 result = Translate(unRotated, translation);
