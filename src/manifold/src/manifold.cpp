@@ -516,12 +516,14 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   float currManifoldDist = 0;
   do {
 
-    cout << "POS: " << currTfIdx << "  " << nextTf[3].x << " " << nextTf[3].y << " " << nextTf[3].z << endl;
+    cout << "CURR POS: " << currTfIdx << "  " << currTf[3].x << " " << currTf[3].y << " " << currTf[3].z << endl;
+    cout << "NEXT POS: " << currTfIdx << "  " << nextTf[3].x << " " << nextTf[3].y << " " << nextTf[3].z << endl;
 
     glm::vec3 currPos = currTf[3];
     glm::vec3 nextPos = nextTf[3];
 
-    float currTfDist = nextPos.x - currPos.x;
+    // X * k = n
+    float currTfDist = glm::length(nextPos - currPos);
 
     //while (currManifoldDist < currTfDist) {
 
@@ -575,10 +577,11 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
       glm::vec3 nextFaceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
       cout << "nextFaceNormal: " << nextFaceNormal.x << " " << nextFaceNormal.y << " " << nextFaceNormal.z << endl;
       float angle = (glm::pi<float>() / 2) - angleBetweenVectors(nextFaceNormal, currTf[0]);
-      updateTf = MatrixTransforms::Yaw(currTf, angle);
+      updateTf = MatrixTransforms::Yaw(updateTf, angle);
       cout << "angle: " << angle << endl;
-      currTf = MatrixTransforms::Yaw(currTf, angle);
+      currTf = MatrixTransforms::Yaw(currTf, angle*2);
       nextTf = MatrixTransforms::CombineTransforms(MatrixTransforms::CombineTransforms(currTf, MatrixTransforms::InvertTransform(updateTf)), tfs[currTfIdx+1]);
+      cout << "NEXT X DIR: " << nextTf[0].x << " " << nextTf[0].y << " " << nextTf[0].z << endl;
 
     } else {
       cout << "next TF on current face" << endl;
