@@ -512,25 +512,21 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   for (auto& tf: tfs) {
     cout << "tf pos: " << tf[3].x << " " << tf[3].y << " " << tf[3].z << endl;
   }
+  cout << "DISTANCE: " << intersectionDistance({10, 10, 5}, {-1, 0, 0}, {0, 10, 0}, {0.707107, 0, 0.707107}, {0, 1, 0}) << endl;
 
   float currManifoldDist = 0;
   do {
-
-    cout << "CURR POS: " << currTfIdx << "  " << currTf[3].x << " " << currTf[3].y << " " << currTf[3].z << endl;
-    cout << "NEXT POS: " << currTfIdx << "  " << nextTf[3].x << " " << nextTf[3].y << " " << nextTf[3].z << endl;
-
     glm::vec3 currPos = currTf[3];
     glm::vec3 nextPos = nextTf[3];
 
     // X * k = n
     float currTfDist = glm::length(nextPos - currPos);
 
-    //while (currManifoldDist < currTfDist) {
-
     int nextHalfedgeIdx = (3 * (currHalfedgeIdx / 3)) + ((currHalfedgeIdx + 1) % 3);
     int nnextHalfedgeIdx = (3 * (nextHalfedgeIdx / 3)) + ((nextHalfedgeIdx + 1) % 3);
 
     glm::vec3 faceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
+    cout << "faceNomral: " << faceNormal.x << " " << faceNormal.y << " " << faceNormal.z << endl;
 
     Halfedge h1 = halfedges[currHalfedgeIdx];
     Halfedge h2 = halfedges[nextHalfedgeIdx];
@@ -542,57 +538,51 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
 
     glm::vec3 tfPos = currTf[3];
     glm::vec3 tfDirX = currTf[0];
-    //cout << "TF POS: " << tfPos.x << " " << tfPos.y << " " << tfPos.z << endl;
+    cout << "TF POS: " << tfPos.x << " " << tfPos.y << " " << tfPos.z << endl;
     cout << "X DIR: " << tfDirX.x << " " << tfDirX.y << " " << tfDirX.z << endl;
 
     glm::vec3 intersection;
     std::vector<int> edges = {currHalfedgeIdx, nextHalfedgeIdx, nnextHalfedgeIdx};
     float minDistance = std::numeric_limits<float>::max();
     int nearestHalfEdgeIdx = -1;
-    bool found = false;
 
     for (int halfEdgeIdx : edges) {
       glm::vec3 startVert = vertPos[halfedges[halfEdgeIdx].startVert];
       glm::vec3 endVert = vertPos[halfedges[halfEdgeIdx].endVert];
+      glm::vec3 edgeDir = glm::normalize(endVert - startVert);
 
-      float intersectDist = intersectionDistance(tfPos, tfDirX, startVert, glm::normalize(endVert - startVert), faceNormal);
+      cout << "startVert: " << startVert.x << " " << startVert.y << " " << startVert.z << endl;
+      cout << "edgeDir: " << edgeDir.x << " " << edgeDir.y << " " << edgeDir.z << endl;
+
+      float intersectDist = intersectionDistance(tfPos, tfDirX, startVert, edgeDir, faceNormal);
+      cout << "intersectDist: " << intersectDist << endl;
       if (intersectDist > 0.0001 && intersectDist < std::numeric_limits<float>::max() && intersectDist < minDistance) {
-        //cout << "minDistance: " << minDistance << ", intersectDist: " << intersectDist << endl;
         minDistance = intersectDist;
         nearestHalfEdgeIdx = halfEdgeIdx;
-        found = true;
       }
     }
 
-    cout << "Distance: " << minDistance << " currTfDist: " << currTfDist << endl;
+    cout << "Distance: " << minDistance << " currTfDist: " << currTfDist << " " << " CurrManifoldDist: " << currManifoldDist << endl;
 
     if (minDistance > 0.0001 && currManifoldDist + minDistance < currTfDist) {
-      cout << "next TF not on current face" << endl;
-      //cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << " XDIRY: " << tfDirX.y << endl;
-      glm::mat4x3 updateTf = MatrixTransforms::TranslateX(glm::mat4x3(1), minDistance);
+      glm::mat4x3 ident = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, 0.0}};
+      glm::mat4x3 updateTf = MatrixTransforms::TranslateX(ident, minDistance);
       currTf = MatrixTransforms::TranslateX(currTf, minDistance);
       result.push_back(currTf);
       currHalfedgeIdx = halfedges[nearestHalfEdgeIdx].pairedHalfedge;
       currManifoldDist += minDistance;
       glm::vec3 nextFaceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
-      cout << "nextFaceNormal: " << nextFaceNormal.x << " " << nextFaceNormal.y << " " << nextFaceNormal.z << endl;
       float angle = (glm::pi<float>() / 2) - angleBetweenVectors(nextFaceNormal, currTf[0]);
-      updateTf = MatrixTransforms::Yaw(updateTf, angle);
       cout << "angle: " << angle << endl;
-      currTf = MatrixTransforms::Yaw(currTf, angle*2);
+      currTf = MatrixTransforms::Yaw(currTf, angle);
       nextTf = MatrixTransforms::CombineTransforms(MatrixTransforms::CombineTransforms(currTf, MatrixTransforms::InvertTransform(updateTf)), tfs[currTfIdx+1]);
-      cout << "NEXT X DIR: " << nextTf[0].x << " " << nextTf[0].y << " " << nextTf[0].z << endl;
-
     } else {
-      cout << "next TF on current face" << endl;
-      //cout << "currManifoldDist: " << currManifoldDist << " minDistance: " << minDistance << " currTfDist: " << currTfDist << endl;
       currManifoldDist = 0;
       result.push_back(nextTf);
       currTfIdx += 1;
       currTf = nextTf;
       nextTf = MatrixTransforms::CombineTransforms(currTf, tfs[currTfIdx+1]);
     }
-    //}
   } while (currTfIdx < tfs.size() - 1);
 
   for (auto& tf: result) {
