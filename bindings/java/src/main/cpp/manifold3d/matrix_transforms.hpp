@@ -157,12 +157,8 @@ glm::mat4x3 Transform(const glm::mat4x3& a, const glm::mat4x3& b) {
 glm::mat4x3 InvertTransform(const glm::mat4x3& m) {
 
   glm::mat3x3 rotationPart = glm::mat3x3(m);
-  glm::mat3x3 unRotated = SetRotation(m, glm::transpose(rotationPart));
-
-  glm::vec3 translation = -m[3];
-  glm::mat4x3 result = Translate(unRotated, translation);
-
-  return result;
+  glm::mat4x3 unRotated = SetRotation(m, glm::transpose(rotationPart));
+  return SetTranslation(unRotated, -m[3]);
 }
 
 glm::mat3x2 InvertTransform(const glm::mat3x2& m) {
@@ -206,7 +202,6 @@ glm::mat3x2 CombineTransforms(const glm::mat3x2& a, const glm::mat3x2& b) {
 
     return result;
 }
-
 
 
 }
