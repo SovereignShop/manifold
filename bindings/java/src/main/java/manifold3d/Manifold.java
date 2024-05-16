@@ -17,6 +17,7 @@ import manifold3d.ManifoldVector;
 import manifold3d.manifold.MeshGL;
 import manifold3d.manifold.ExportOptions;
 import manifold3d.manifold.CrossSection;
+import manifold3d.manifold.CrossSectionVector;
 
 import manifold3d.pub.DoubleMesh;
 import manifold3d.pub.Box;
@@ -179,6 +180,9 @@ public class Manifold extends Pointer {
     public CrossSection slice() {
         return this.slice((float) 0.0);
     }
+
+    @Name("Slices")
+    public native @ByVal CrossSectionVector slices(float bottomZ, float topZ, int nSlices);
 
     @Name("CalculateNormals")
     public native @ByVal Manifold calculateNormals(int normalIdx, float minSharpAngle);
