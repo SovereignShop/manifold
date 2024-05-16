@@ -203,15 +203,15 @@ TEST(Manifold, surfaceMap) {
   Manifold cube = Manifold::Cube({10, 10, 10}, false);
   Manifold sphere = Manifold::Sphere(10);
   glm::mat4x3 transform1 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {1.65, 0, 5}};
-  glm::mat4x3 transform2 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {7.0, 0, 5}};
-  glm::mat4x3 transform3 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {9.0, 0, 5}};
+  glm::mat4x3 transform2 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {31.0, 0, 5}};
+  glm::mat4x3 transform3 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {32.5, 0, 5}};
   glm::mat4x3 transform4 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {9.5, 0, 5}};
   glm::mat4x3 transform5 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {11.5, 0, 5}};
   glm::mat4x3 transform6 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {16.5, 0, 5}};
   glm::mat4x3 transform7 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {23.5, 0, 5}};
-  glm::mat4x3 transform8 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {26.5, 0, 5}};
-  vector<glm::mat4x3> ret = cube.surfaceMap({transform1, transform2, transform3, transform4, transform5, transform6,
-      transform7, transform8});
+  glm::mat4x3 transform8 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {37.5, 0, 5}};
+  glm::mat4x3 transform9 = {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {30.5, 0, 5}};
+  vector<glm::mat4x3> ret = cube.surfaceMap({transform1, transform2, transform3});
 }
 
 Polygons RotatePolygons(Polygons polys, const int index) {

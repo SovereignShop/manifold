@@ -467,20 +467,59 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
     return v1.z * v2.x - v1.x * v2.z;
   };
 
-  auto intersectionDistance = [](const glm::vec3& p1, const glm::vec3& d1, const glm::vec3& p2, const glm::vec3& d2, const glm::vec3& faceNormal) -> float {
+  // auto intersectionDistance = [](const glm::vec3& p1, const glm::vec3& d1, const glm::vec3& p2, const glm::vec3& d2, const glm::vec3& faceNormal) -> float {
+  //     glm::vec3 dp = p2 - p1;
+  //     glm::vec3 d1xd2 = glm::cross(d1, d2);
+
+  //     // Solve for t (distance along d1 to the intersection point)
+  //     float t = glm::dot(glm::cross(dp, d2), faceNormal) / glm::dot(glm::cross(d1, d2), faceNormal);
+
+  //     // Check if the point of intersection is valid (not resulting from parallel lines)
+  //     if (glm::length(d1xd2) < 1e-7 || t < 0) {
+  //         return std::numeric_limits<float>::max();
+  //     }
+
+  //     // Return distance to intersection point along d1
+  //     return glm::length(t * d1);
+  // };
+
+  auto intersectionDistance = [](const glm::vec3& p1, const glm::vec3& d1, const glm::vec3& p2, const glm::vec3& d2, const glm::vec3& faceNormal, float tolerance = 1e-3) -> float {
       glm::vec3 dp = p2 - p1;
       glm::vec3 d1xd2 = glm::cross(d1, d2);
 
-      // Solve for t (distance along d1 to the intersection point)
-      float t = glm::dot(glm::cross(dp, d2), faceNormal) / glm::dot(glm::cross(d1, d2), faceNormal);
+      // Compute the denominator for t using the face normal
+      float denom = glm::dot(glm::cross(d1, d2), faceNormal);
 
-      // Check if the point of intersection is valid (not resulting from parallel lines)
-      if (glm::length(d1xd2) < 1e-7 || t < 0) {
+      // Check if the lines are nearly parallel or if the plane normal is almost orthogonal to the line of intersection
+      if (glm::length(d1xd2) < tolerance || std::abs(denom) < tolerance) {
           return std::numeric_limits<float>::max();
       }
 
-      // Return distance to intersection point along d1
-      return glm::length(t * d1);
+      // Solve for t (distance along d1 to the intersection point)
+      float t = glm::dot(glm::cross(dp, d2), faceNormal) / denom;
+
+      // Check if t is within a reasonable range considering the tolerance
+      if (t < -tolerance) {
+          return std::numeric_limits<float>::max();
+      }
+
+      // Compute the actual intersection point along d1
+      glm::vec3 intersectionPoint = p1 + t * d1;
+
+      // Calculate the distance from p1 to the intersection point
+      float distance = glm::length(t * d1);
+
+      // To further check the accuracy of the intersection, calculate the point on the second line
+      // Find s for line 2 such that the points are the closest or verify the point lies on line 2 within tolerance
+      float s = glm::dot((intersectionPoint - p2), d2) / glm::dot(d2, d2);
+      glm::vec3 closestPointOnLine2 = p2 + s * d2;
+
+      // Check if the intersection point and the closest point on line 2 are within tolerance
+      if (glm::length(intersectionPoint - closestPointOnLine2) > tolerance) {
+          return std::numeric_limits<float>::max();
+      }
+
+      return distance;
   };
 
   auto toRelativeTfs = [](std::vector<glm::mat4x3> tfs) -> std::vector<glm::mat4x3> {
@@ -495,6 +534,9 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
     return result;
   };
 
+  auto invert = [](glm::mat4x3 m) -> glm::mat4x3 { return MatrixTransforms::InvertTransform(m); };
+  auto combine = [](glm::mat4x3 m1, glm::mat4x3 m2) -> glm::mat4x3 { return MatrixTransforms::CombineTransforms(m1, m2); };
+
   auto& vertPos = impl->vertPos_;
 
   int currTfIdx = 0;
@@ -506,7 +548,8 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   std::vector<glm::mat4x3> tfs = toRelativeTfs(transforms);
 
   glm::mat4x3 currTf = transforms[currTfIdx];
-  glm::mat4x3 nextTf = MatrixTransforms::CombineTransforms(currTf, tfs[currTfIdx+1]);
+  glm::mat4x3 nextTf = combine(currTf, tfs[currTfIdx+1]);
+  float currTfDist = glm::length(nextTf[3] - currTf[3]);
 
 
   for (auto& tf: tfs) {
@@ -514,14 +557,8 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
   }
   cout << "DISTANCE: " << intersectionDistance({10, 10, 5}, {-1, 0, 0}, {0, 10, 0}, {0.707107, 0, 0.707107}, {0, 1, 0}) << endl;
 
-  float currManifoldDist = 0;
+  float currTfOffset = 0;
   do {
-    glm::vec3 currPos = currTf[3];
-    glm::vec3 nextPos = nextTf[3];
-
-    // X * k = n
-    float currTfDist = glm::length(nextPos - currPos);
-
     int nextHalfedgeIdx = (3 * (currHalfedgeIdx / 3)) + ((currHalfedgeIdx + 1) % 3);
     int nnextHalfedgeIdx = (3 * (nextHalfedgeIdx / 3)) + ((nextHalfedgeIdx + 1) % 3);
 
@@ -562,26 +599,32 @@ std::vector<glm::mat4x3> Manifold::surfaceMap(const std::vector<glm::mat4x3>& tr
       }
     }
 
-    cout << "Distance: " << minDistance << " currTfDist: " << currTfDist << " " << " CurrManifoldDist: " << currManifoldDist << endl;
+    cout << "minDistance: " << minDistance << " currTfDist: " << currTfDist << " " << " currTfOffset: " << currTfOffset << endl;
 
-    if (minDistance > 0.0001 && currManifoldDist + minDistance < currTfDist) {
+    if (minDistance > 0.0001 && currTfOffset + minDistance <= currTfDist) {
+      // not on face
       glm::mat4x3 ident = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, 0.0}};
       glm::mat4x3 updateTf = MatrixTransforms::TranslateX(ident, minDistance);
       currTf = MatrixTransforms::TranslateX(currTf, minDistance);
       result.push_back(currTf);
       currHalfedgeIdx = halfedges[nearestHalfEdgeIdx].pairedHalfedge;
-      currManifoldDist += minDistance;
+      currTfOffset += minDistance;
       glm::vec3 nextFaceNormal = impl->faceNormal_[halfedges[currHalfedgeIdx].face];
       float angle = (glm::pi<float>() / 2) - angleBetweenVectors(nextFaceNormal, currTf[0]);
       cout << "angle: " << angle << endl;
       currTf = MatrixTransforms::Yaw(currTf, angle);
-      nextTf = MatrixTransforms::CombineTransforms(MatrixTransforms::CombineTransforms(currTf, MatrixTransforms::InvertTransform(updateTf)), tfs[currTfIdx+1]);
+      nextTf = combine(combine(currTf, invert(updateTf)), tfs[currTfIdx+1]);
     } else {
-      currManifoldDist = 0;
-      result.push_back(nextTf);
+      // on face
+      currTfOffset = 0;
+      result.push_back(currTf);
       currTfIdx += 1;
+
       currTf = nextTf;
       nextTf = MatrixTransforms::CombineTransforms(currTf, tfs[currTfIdx+1]);
+      // X * k = n
+      currTfDist = glm::length(nextTf[3] - currTf[3]);
+
     }
   } while (currTfIdx < tfs.size() - 1);
 
