@@ -86,7 +86,7 @@ glm::mat4x3 SetRotation(const glm::mat4x3& m, const glm::mat3x3& rotation) {
     return result;
 }
 
-glm::mat4x3 SetRotation(const glm::mat3x2& m, const glm::mat2x2& rotation) {
+glm::mat3x2 SetRotation(const glm::mat3x2& m, const glm::mat2x2& rotation) {
     glm::mat3x2 result = m;
     for (int i = 0; i < 2; ++i) {
         result[i] = rotation[i];
@@ -165,14 +165,15 @@ glm::mat3x2 InvertTransform(const glm::mat3x2& m) {
     // Extract the 2x2 rotation/scaling part of the matrix
     glm::mat2 rotationPart = glm::mat2(m);
     // Calculate the inverse rotation/scaling by transposing
-    glm::mat2 unRotated = glm::transpose(rotationPart);
+    glm::mat3x2 unRotated = SetRotation(m, glm::transpose(rotationPart));
+    return SetTranslation(unRotated, -m[2]);
 
-    // Convert back to a 3x3 matrix for translation
-    glm::vec2 translation = -m[2];
-    // Apply the inverted translation
-    glm::mat3x2 result = Translate(unRotated, translation);
+    // // Convert back to a 3x3 matrix for translation
+    // glm::vec2 translation = -m[2];
+    // // Apply the inverted translation
+    // glm::mat3x2 result = Translate(unRotated, translation);
 
-    return result;
+    // return result;
 }
 
 glm::mat4x3 CombineTransforms(const glm::mat4x3& a, const glm::mat4x3& b) {

@@ -8,8 +8,139 @@
 #include "cross_section.h"
 #include "buffer_utils.hpp"
 #include "matrix_transforms.hpp"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 namespace MeshUtils {
+
+
+//#include <glm/vec3.hpp>     // Include GLM for vector operations
+
+manifold::Manifold CreateSurface(const double* heightMap, int width, int height, double pixelWidth = 1.0) {
+    // Calculate the number of vertices and triangles in advance
+    int numVertices = 2 * width * height; // Top and bottom vertices
+    int numTriangles = 2 * (width - 1) * (height - 1) * 2 + 2 * (width - 1 + height - 1) * 2; // Top, bottom, and sides
+
+    // Preallocate vectors
+    std::vector<glm::vec3> vertices;
+    vertices.reserve(numVertices);
+    std::vector<glm::ivec3> triangles;
+    triangles.reserve(numTriangles);
+
+    // Generate top surface vertices
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            double heightValue = heightMap[i * width + j];
+            vertices.emplace_back(j * pixelWidth, i * pixelWidth, heightValue); // Top vertex scaled by pixelWidth
+        }
+    }
+
+    // Generate bottom surface vertices (z = 0)
+    int bottomOffset = vertices.size();  // Bottom vertices start after the top vertices
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            vertices.emplace_back(j * pixelWidth, i * pixelWidth, 0.0);
+        }
+    }
+
+    // Generate triangles for the top and bottom surfaces
+    for (int i = 0; i < height - 1; ++i) {
+        for (int j = 0; j < width - 1; ++j) {
+            int topLeft = i * width + j;
+            int topRight = i * width + (j + 1);
+            int bottomLeft = (i + 1) * width + j;
+            int bottomRight = (i + 1) * width + (j + 1);
+
+            // Top surface triangles (counterclockwise)
+            triangles.emplace_back(bottomRight, bottomLeft, topLeft);
+            triangles.emplace_back(topRight, bottomRight, topLeft);
+
+            // Bottom surface triangles (clockwise)
+            int bTopLeft = bottomOffset + topLeft;
+            int bTopRight = bottomOffset + topRight;
+            int bBottomLeft = bottomOffset + bottomLeft;
+            int bBottomRight = bottomOffset + bottomRight;
+            triangles.emplace_back(bBottomLeft, bBottomRight, bTopLeft);
+            triangles.emplace_back(bTopLeft, bBottomRight, bTopRight);
+        }
+    }
+
+    // Left edge
+    for (int i = 0; i < height - 1; ++i) {
+        int tTop = i * width;
+        int tBottom = (i + 1) * width;
+        int bTop = bottomOffset + tTop;
+        int bBottom = bottomOffset + tBottom;
+
+        // Left side triangles
+        triangles.emplace_back(tTop, tBottom, bBottom);
+        triangles.emplace_back(tTop, bBottom, bTop);
+    }
+
+    // Right edge
+    for (int i = 0; i < height - 1; ++i) {
+        int tTop = i * width + (width - 1);
+        int tBottom = (i + 1) * width + (width - 1);
+        int bTop = bottomOffset + tTop;
+        int bBottom = bottomOffset + tBottom;
+
+        // Right side triangles
+        triangles.emplace_back(tTop, bBottom, tBottom);
+        triangles.emplace_back(tTop, bTop, bBottom);
+    }
+
+    // Top edge
+    for (int j = 0; j < width - 1; ++j) {
+        int tLeft = j;
+        int tRight = j + 1;
+        int bLeft = bottomOffset + tLeft;
+        int bRight = bottomOffset + tRight;
+
+        // Top side triangles
+        triangles.emplace_back(bLeft, bRight, tRight);
+        triangles.emplace_back(tLeft, bLeft, tRight);
+    }
+
+    // Bottom edge
+    for (int j = 0; j < width - 1; ++j) {
+        int tLeft = (height - 1) * width + j;
+        int tRight = (height - 1) * width + j + 1;
+        int bLeft = bottomOffset + tLeft;
+        int bRight = bottomOffset + tRight;
+
+        // Bottom side triangles
+        triangles.emplace_back(tLeft, tRight, bRight);
+        triangles.emplace_back(tLeft, bRight, bLeft);
+    }
+
+    // Step 5: Create and validate the manifold
+    manifold::Manifold solid = manifold::Manifold({vertices, triangles});
+    manifold::Manifold::Error status = solid.Status();
+    if (status != manifold::Manifold::Error::NoError) {
+        throw std::runtime_error("Generated manifold is invalid.");
+    }
+
+    return solid;
+}
+
+manifold::Manifold CreateSurface(const std::string& texturePath, double pixelWidth = 1.0) {
+    // Load the texture image as a grayscale image
+    int width, height, channels;
+    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &channels, 1);
+    if (!data) {
+        throw std::runtime_error("Failed to load texture image.");
+    }
+
+    // Create a height map from the texture data
+    std::vector<double> heightMap(width * height);
+    for (int i = 0; i < width * height; ++i) {
+        // Copy pixel value directly into the height map
+        heightMap[i] = static_cast<double>(data[i]);
+    }
+    stbi_image_free(data); // Free the image data
+
+    // Invoke the overloaded function with the height map
+    return CreateSurface(heightMap.data(), width, height, pixelWidth);
+}
 
 std::vector<glm::ivec3> TriangulateFaces(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces, float precision) {
     std::vector<glm::ivec3> result;
