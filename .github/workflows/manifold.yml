@@ -340,7 +340,7 @@ jobs:
         path: bindings/java/target/*.jar
     - name: Upload Surefire Reports
       if: failure() # This step will run only if the previous steps failed
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: surefire-reports
         path: |
