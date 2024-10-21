@@ -387,17 +387,17 @@ jobs:
       run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
       shell: bash
     - name: Download Artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: manifold_java_bindings_linux_NONE_OFF_${{env.VERSION}}
         path: linux-jar
     - name: Download Artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: manifold_java_bindings_mac_TBB_${{env.VERSION}}
         path: mac-tbb-jar
     - name: Download Artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: manifold_java_bindings_linux_TBB_OFF_${{env.VERSION}}
         path: linux-tbb-jar
