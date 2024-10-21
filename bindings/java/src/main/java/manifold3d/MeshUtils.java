@@ -40,6 +40,28 @@ public class MeshUtils extends Pointer {
 
         return Polyhedron(verticesPtr, nVertices, faceBufPtr, lengthsPtr, nFaces);
     }
+
+    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height);
+    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height, double pixelWidth);
+    public static Manifold CreateSurface(double[] heightMapArray, int width, int height) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
+        return CreateSurface(heightMapPtr, width, height);
+    }
+    public static Manifold CreateSurface(double[] heightMapArray, int width, int height, double pixelWidth) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
+        return CreateSurface(heightMapPtr, width, height, pixelWidth);
+    }
+
+    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, width, height);
+    }
+    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height, double pixelWidth) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, width, height, pixelWidth);
+    }
+
+
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms);
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms, LoftAlgorithm algorithmEnum);
     public static native @ByVal Manifold Loft(@ByRef Polygons polygons, @ByRef DoubleMat4x3Vector transforms);

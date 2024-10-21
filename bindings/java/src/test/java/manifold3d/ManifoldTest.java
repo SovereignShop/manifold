@@ -1,7 +1,6 @@
 package manifold3d;
 
 import org.junit.Test;
-import org.junit.Assert;
 import manifold3d.Manifold;
 import manifold3d.glm.DoubleMat4x3;
 import manifold3d.glm.DoubleMat4x3Vector;
@@ -14,6 +13,7 @@ import manifold3d.manifold.MeshIO;
 import manifold3d.manifold.CrossSectionVector;
 import manifold3d.manifold.CrossSection;
 import manifold3d.manifold.ExportOptions;
+import java.nio.DoubleBuffer;
 
 public class ManifoldTest {
 
@@ -21,6 +21,7 @@ public class ManifoldTest {
 
     @Test
     public void testManifold() {
+        // Existing test code
         DoubleMesh mesh = new DoubleMesh();
         Manifold manifold = new Manifold(mesh);
 
@@ -61,5 +62,34 @@ public class ManifoldTest {
         assert loft.getProperties().volume() > 0.0;
 
         DoubleVec3Vector vertPos = hullMesh.vertPos();
+
+        // New test code: Creating a simple texture and exporting a GLB file
+        // Define the dimensions of the height map
+        int width = 10;
+        int height = 10;
+        double[] heightMap = new double[width * height];
+        //Arrays.fill(heightMap, 1.0); // Flat surface
+
+        double maxHeight = 20;
+
+        // Generate a simple height map (e.g., a sine wave pattern)
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                // Create a sine wave pattern
+                double z = Math.sin((double)x / width * 2 * Math.PI) * Math.sin((double)y / height * 2 * Math.PI) * maxHeight;
+                heightMap[x + y * width] = z;
+            }
+        }
+
+        // Create a Manifold from the height map
+        Manifold texturedSurface = MeshUtils.CreateSurface(heightMap, width, height, 15.0);
+
+        //System.out.println(texturedSurface.status());
+        // Export the Manifold to a GLB file
+        DoubleMesh texturedMesh = texturedSurface.getMesh();
+        MeshIO.ExportMesh("TexturedSurface.glb", texturedMesh, opts);
+
+        // Verify that the Manifold has a positive volume
+        assert texturedSurface.getProperties().volume() > 0.0;
     }
 }
