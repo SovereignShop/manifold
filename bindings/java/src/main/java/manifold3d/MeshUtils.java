@@ -43,6 +43,8 @@ public class MeshUtils extends Pointer {
 
     public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height);
     public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height, double pixelWidth);
+    public static native @ByVal Manifold CreateSurface(@Const @StdString String filename);
+    public static native @ByVal Manifold CreateSurface(@Const @StdString String filename, double pixelWidth);
     public static Manifold CreateSurface(double[] heightMapArray, int width, int height) {
         DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
         return CreateSurface(heightMapPtr, width, height);
