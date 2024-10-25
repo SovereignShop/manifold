@@ -42,6 +42,12 @@ if(MANIFOLD_FUZZ)
   set(CMAKE_CXX_FLAGS "$CMAKE_CXX_FLAGS -fsanitize=address")
 endif()
 
+# Find CGAL package
+find_package(CGAL REQUIRED COMPONENTS Core)
+
+# Include CGAL headers
+include_directories(${CGAL_INCLUDE_DIRS})
+
 option(TRACY_ENABLE "Use tracy profiling" OFF) 
 option(TRACY_MEMORY_USAGE "Track memory allocation with tracy (expensive)" OFF)
 option(BUILD_TEST_CGAL "Build CGAL performance comparisons" OFF)

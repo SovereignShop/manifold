@@ -18,6 +18,7 @@
 
 #include "cross_section.h"
 #include "test.h"
+#include "mesh_utils.hpp"
 
 #ifdef MANIFOLD_EXPORT
 #include "meshIO.h"
@@ -65,6 +66,32 @@ TEST(Manifold, GetMeshGL) {
     for (const int j : {0, 1, 2})
       ASSERT_EQ(meshGL_out.triVerts[3 * i + j], mesh_out.triVerts[i][j]);
   }
+}
+
+TEST(Manifold, TextureMesh) {
+  int width = 2;
+  int height = 2;
+
+  double heightMap[width * height];
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      heightMap[x + y * width] = 3.0;
+    }
+  }
+
+  Manifold texturedSurface =
+      MeshUtils::CreateSurface(heightMap, width, height);
+
+  //Manifold surface = MeshUtils::CreateSurface("example-minimal-3133648999.jpg", 10.0);
+  manifold::Manifold man = MeshUtils::readPlyFile("2024_10_19__17_59_54_raw.ply", 10.0, 20, 304.8);
+  //MeshUtils::processPlyFile();
+  ExportOptions opts;
+  Material mat;
+  mat.colorChannels = {3,4,5,-1};
+  opts.mat = mat;
+
+  ExportMesh("property.gltf", man.GetMesh(), opts);
+  //EXPECT_EQ(10, 10);
 }
 
 TEST(Manifold, Empty) {
