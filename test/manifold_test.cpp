@@ -89,8 +89,9 @@ TEST(Manifold, TextureMesh) {
   Material mat;
   mat.colorChannels = {3,4,5,-1};
   opts.mat = mat;
+  //Manifold man = MeshUtils::createRedBlueTetrahedrons();
 
-  ExportMesh("property.gltf", man.GetMesh(), opts);
+  ExportMesh("tet.gltf", man.GetMesh(), opts);
   //EXPECT_EQ(10, 10);
 }
 
