@@ -72,26 +72,29 @@ TEST(Manifold, TextureMesh) {
   int width = 2;
   int height = 2;
 
+  std::vector<glm::vec4> color(width * height);
   double heightMap[width * height];
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       heightMap[x + y * width] = 3.0;
+      color[x + y * width] = {1.0, 0.0, 0.0, 1.0};
     }
   }
 
-  Manifold texturedSurface =
-      MeshUtils::CreateSurface(heightMap, width, height);
+  //Manifold texturedSurface =
+  //    MeshUtils::CreateSurface(heightMap, color, width, height);
 
-  //Manifold surface = MeshUtils::CreateSurface("example-minimal-3133648999.jpg", 10.0);
+  //Manifold surface = MeshUtils::CreateSurface("example-minimal-3133648999.jpg", 10.0)tet;
   manifold::Manifold man = MeshUtils::readPlyFile("2024_10_19__17_59_54_raw.ply", 10.0, 20, 304.8);
   //MeshUtils::processPlyFile();
   ExportOptions opts;
   Material mat;
+  mat.metalness = 0.0;
   mat.colorChannels = {3,4,5,-1};
   opts.mat = mat;
   //Manifold man = MeshUtils::createRedBlueTetrahedrons();
 
-  ExportMesh("tet.gltf", man.GetMesh(), opts);
+  ExportMesh("tmp.gltf", man.GetMeshGL(), opts);
   //EXPECT_EQ(10, 10);
 }
 

@@ -214,6 +214,8 @@ void ExportMesh(const std::string& filename, const MeshGL& mesh,
   ASSERT(validChannels, userErr, "Invalid colorChannels.");
   if (hasColor) mesh_out->mColors[0] = new aiColor4D[mesh_out->mNumVertices];
 
+  cout << "COLOR:" << hasColor << endl;
+
   for (int i = 0; i < mesh_out->mNumVertices; ++i) {
     glm::vec3 v;
     for (int j : {0, 1, 2}) v[j] = mesh.vertProperties[i * mesh.numProp + j];
