@@ -69,32 +69,31 @@ TEST(Manifold, GetMeshGL) {
 }
 
 TEST(Manifold, TextureMesh) {
-  int width = 2;
-  int height = 2;
+  //int width = 40;
+  //int height = 40;
 
-  std::vector<glm::vec4> color(width * height);
-  double heightMap[width * height];
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      heightMap[x + y * width] = 3.0;
-      color[x + y * width] = {1.0, 0.0, 0.0, 1.0};
-    }
-  }
+  //std::vector<std::array<double, 4>> heightMap(width * height);
+  //for (int y = 0; y < height; y++) {
+  //  for (int x = 0; x < width; x++) {
+  //    heightMap[x + y * width] = {10.0, 1.0, 0.0, 0.0};
+  //  }
+  //}
 
   //Manifold texturedSurface =
-  //    MeshUtils::CreateSurface(heightMap, color, width, height);
+  //  MeshUtils::CreateSurface(heightMap, width, height) ^ (Manifold::Cube({10, 10, 30}, false));
 
-  //Manifold surface = MeshUtils::CreateSurface("example-minimal-3133648999.jpg", 10.0)tet;
-  manifold::Manifold man = MeshUtils::readPlyFile("2024_10_19__17_59_54_raw.ply", 10.0, 20, 304.8);
-  //MeshUtils::processPlyFile();
+  //Manifold surface = MeshUtils::CreateSurface("/home/john/Documents/property_scan_data/2024_10_27__11_02_02.ply", 10.0)tet;
+  manifold::Manifold surface = MeshUtils::readPlyFile("2024_10_27__11_50_18.ply", 10.0, 20, 304.8);
+  ////MeshUtils::processPlyFile();
   ExportOptions opts;
   Material mat;
+  mat.roughness = 0.0;
   mat.metalness = 0.0;
   mat.colorChannels = {3,4,5,-1};
   opts.mat = mat;
   //Manifold man = MeshUtils::createRedBlueTetrahedrons();
 
-  ExportMesh("tmp.gltf", man.GetMeshGL(), opts);
+  ExportMesh("2024_10_27__11_50_18.glb", surface.GetMeshGL(), opts);
   //EXPECT_EQ(10, 10);
 }
 
