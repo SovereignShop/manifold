@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <glm/glm.hpp>
 #include <vector>
+#include "happly.h"
 #include "polygon.h"
 #include "manifold.h"
 #include "cross_section.h"
@@ -141,6 +142,182 @@ manifold::Manifold CreateSurface(const std::string& texturePath, double pixelWid
     // Invoke the overloaded function with the height map
     return CreateSurface(heightMap.data(), width, height, pixelWidth);
 }
+
+manifold::Manifold CreateSurface(const double* vertProperties, int numProps, int width, int height, double pixelWidth = 1.0) {
+    // Create the MeshGL structure
+    manifold::MeshGL meshGL;
+
+    // Set number of vertex properties based on numProps
+    meshGL.numProp = numProps;
+
+    // Generate top surface vertices and properties
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            const double* props = &vertProperties[(i * width + j) * numProps];
+            double x = j * pixelWidth;
+            double y = i * pixelWidth;
+            double z = props[2];  // Height (z)
+
+            // Add vertex properties (x, y, z)
+            meshGL.vertProperties.push_back(x);
+            meshGL.vertProperties.push_back(y);
+            meshGL.vertProperties.push_back(z);
+
+            // Add additional properties from index 3 to numProps
+            for (int k = 3; k < numProps; ++k) {
+                meshGL.vertProperties.push_back(props[k]);
+            }
+        }
+    }
+
+    // Generate bottom surface vertices (z = 0)
+    int bottomOffset = width * height;  // Bottom vertices start after the top vertices
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            // Add bottom vertex properties (x, y, z=0)
+            meshGL.vertProperties.push_back(j * pixelWidth);
+            meshGL.vertProperties.push_back(i * pixelWidth);
+            meshGL.vertProperties.push_back(0.0);
+
+            // Set remaining properties to 0 from index 3 to numProps
+            for (int k = 3; k < numProps; ++k) {
+                meshGL.vertProperties.push_back(0.0);
+            }
+        }
+    }
+
+    // Generate triangles for the top and bottom surfaces and edges as in the original code
+    for (int i = 0; i < height - 1; ++i) {
+        for (int j = 0; j < width - 1; ++j) {
+            int topLeft = i * width + j;
+            int topRight = i * width + (j + 1);
+            int bottomLeft = (i + 1) * width + j;
+            int bottomRight = (i + 1) * width + (j + 1);
+
+            // Top surface triangles (counterclockwise)
+            meshGL.triVerts.push_back(bottomRight);
+            meshGL.triVerts.push_back(bottomLeft);
+            meshGL.triVerts.push_back(topLeft);
+
+            meshGL.triVerts.push_back(topRight);
+            meshGL.triVerts.push_back(bottomRight);
+            meshGL.triVerts.push_back(topLeft);
+
+            // Bottom surface triangles (clockwise)
+            int bTopLeft = bottomOffset + topLeft;
+            int bTopRight = bottomOffset + topRight;
+            int bBottomLeft = bottomOffset + bottomLeft;
+            int bBottomRight = bottomOffset + bottomRight;
+
+            meshGL.triVerts.push_back(bBottomLeft);
+            meshGL.triVerts.push_back(bBottomRight);
+            meshGL.triVerts.push_back(bTopLeft);
+
+            meshGL.triVerts.push_back(bTopLeft);
+            meshGL.triVerts.push_back(bBottomRight);
+            meshGL.triVerts.push_back(bTopRight);
+        }
+    }
+
+    // Additional edge triangles...
+
+    // Create and validate the manifold
+    manifold::Manifold solid = manifold::Manifold(meshGL);
+    manifold::Manifold::Error status = solid.Status();
+    if (status != manifold::Manifold::Error::NoError) {
+        throw std::runtime_error("Generated manifold is invalid.");
+    }
+
+    return solid;
+}
+
+
+manifold::Manifold PlyToSurface(const std::string &filepath, double cell_size, double z_offset, double scale_factor) {
+    // Create a reader for the PLY file
+    happly::PLYData plyIn(filepath);
+
+    std::vector<float> vX = plyIn.getElement("vertex").getProperty<float>("x");
+    std::vector<float> vY = plyIn.getElement("vertex").getProperty<float>("y");
+    std::vector<float> vZ = plyIn.getElement("vertex").getProperty<float>("z");
+
+    std::vector<uint8_t> vR = plyIn.getElement("vertex").getProperty<uint8_t>("red");
+    std::vector<uint8_t> vG = plyIn.getElement("vertex").getProperty<uint8_t>("green");
+    std::vector<uint8_t> vB = plyIn.getElement("vertex").getProperty<uint8_t>("blue");
+
+    float min_x = *std::min_element(vX.begin(), vX.end());
+    float max_x = *std::max_element(vX.begin(), vX.end());
+    float min_y = *std::min_element(vY.begin(), vY.end());
+    float max_y = *std::max_element(vY.begin(), vY.end());
+    float min_z = *std::min_element(vZ.begin(), vZ.end());
+
+    // Calculate the spans for x and y
+    double x_span = (max_x - min_x) * scale_factor;
+    double y_span = (max_y - min_y) * scale_factor;
+
+    int grid_resolution_x = static_cast<int>(x_span / cell_size);
+    int grid_resolution_y = static_cast<int>(y_span / cell_size);
+
+    // Ensure at least one cell is created in both directions
+    grid_resolution_x = std::max(1, grid_resolution_x);
+    grid_resolution_y = std::max(1, grid_resolution_y);
+
+    // Initialize grid structures for z-value sums, color sums, and point counts
+    std::vector<std::vector<double>> z_sum(grid_resolution_x, std::vector<double>(grid_resolution_y, 0.0));
+    std::vector<std::vector<double>> r_sum(grid_resolution_x, std::vector<double>(grid_resolution_y, 0.0));
+    std::vector<std::vector<double>> g_sum(grid_resolution_x, std::vector<double>(grid_resolution_y, 0.0));
+    std::vector<std::vector<double>> b_sum(grid_resolution_x, std::vector<double>(grid_resolution_y, 0.0));
+    std::vector<std::vector<int>> point_count(grid_resolution_x, std::vector<int>(grid_resolution_y, 0));
+
+    // Process each point in the PLY file
+    for (size_t i = 0; i < vX.size(); ++i) {
+        double x = vX[i];
+        double y = vY[i];
+        double z = vZ[i];
+        double r = static_cast<double>(vR[i]) / 255.0;
+        double g = static_cast<double>(vG[i]) / 255.0;
+        double b = static_cast<double>(vB[i]) / 255.0;
+
+        // Find the corresponding grid cell indices
+        int grid_x = static_cast<int>(((x - min_x) * scale_factor) / cell_size);
+        int grid_y = static_cast<int>(((y - min_y) * scale_factor) / cell_size);
+
+        // Ensure the point falls within the grid bounds
+        if (grid_x >= 0 && grid_x < grid_resolution_x && grid_y >= 0 && grid_y < grid_resolution_y) {
+            // Accumulate the z and color values in the corresponding grid cell
+            z_sum[grid_x][grid_y] += (z - min_z) * scale_factor;
+            r_sum[grid_x][grid_y] += r;
+            g_sum[grid_x][grid_y] += g;
+            b_sum[grid_x][grid_y] += b;
+            point_count[grid_x][grid_y] += 1;
+        }
+    }
+
+    // Initialize vertProperties to store the flattened vertex data
+    std::vector<double> vertProperties;
+    vertProperties.reserve(grid_resolution_x * grid_resolution_y * 6);  // Reserve space for x, y, z, r, g, b per cell
+
+    // Compute the average height and color for each grid cell and populate vertProperties
+    for (int i = 0; i < grid_resolution_x; ++i) {
+        for (int j = 0; j < grid_resolution_y; ++j) {
+            double avg_z = (point_count[i][j] > 0) ? (z_sum[i][j] / point_count[i][j]) + z_offset : 0.0;
+            double avg_r = (point_count[i][j] > 0) ? (r_sum[i][j] / point_count[i][j]) : 0.0;
+            double avg_g = (point_count[i][j] > 0) ? (g_sum[i][j] / point_count[i][j]) : 0.0;
+            double avg_b = (point_count[i][j] > 0) ? (b_sum[i][j] / point_count[i][j]) : 0.0;
+
+            // Push x, y, z, r, g, b for each grid cell in row-major order
+            vertProperties.push_back(j * cell_size);     // x
+            vertProperties.push_back(i * cell_size);     // y
+            vertProperties.push_back(avg_z);             // z
+            vertProperties.push_back(avg_r);             // r
+            vertProperties.push_back(avg_g);             // g
+            vertProperties.push_back(avg_b);             // b
+        }
+    }
+
+    // Pass vertProperties to CreateSurface as a pointer and specify numProps = 6
+    return CreateSurface(vertProperties.data(), 6, grid_resolution_x, grid_resolution_y, cell_size);
+}
+
 
 std::vector<glm::ivec3> TriangulateFaces(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces, float precision) {
     std::vector<glm::ivec3> result;

@@ -49,20 +49,38 @@ public class MeshUtils extends Pointer {
         DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
         return CreateSurface(heightMapPtr, width, height);
     }
+    public static Manifold CreateSurface(double[] heightMapArray, int numProps, int width, int height) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
+        return CreateSurface(heightMapPtr, numProps, width, height);
+    }
     public static Manifold CreateSurface(double[] heightMapArray, int width, int height, double pixelWidth) {
         DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
         return CreateSurface(heightMapPtr, width, height, pixelWidth);
     }
-
+    public static Manifold CreateSurface(double[] heightMapArray, int numProps, int width, int height, double pixelWidth) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
+        return CreateSurface(heightMapPtr, width, height, pixelWidth);
+    }
     public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height) {
         DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
         return CreateSurface(heightMapPtr, width, height);
+    }
+    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int numProps, int width, int height) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, numProps, width, height);
     }
     public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height, double pixelWidth) {
         DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
         return CreateSurface(heightMapPtr, width, height, pixelWidth);
     }
+    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int numProps, int width, int height, double pixelWidth) {
+        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, numProps, width, height, pixelWidth);
+    }
 
+    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heatMap, int numProps, int width, int height);
+    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heatMap, int numProps, int width, int height, double pixelWidth);
+    public static native @ByVal Manifold PlyToSurface(@Const @StdString String filepath, double cellSize, double zOffset, double scaleFactor);
 
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms);
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms, LoftAlgorithm algorithmEnum);
