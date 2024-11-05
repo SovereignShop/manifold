@@ -70,7 +70,7 @@ manifold::Manifold CreateSurface(const std::vector<std::array<double, 4>>& heigh
                 meshGL.vertProperties.push_back(g);
                 meshGL.vertProperties.push_back(b);
             } else {
-                meshGL.vertProperties.push_back(1.0);              // r
+                meshGL.vertProperties.push_back(0.0);              // r
                 meshGL.vertProperties.push_back(0.0);              // g
                 meshGL.vertProperties.push_back(0.0);              // b
             }
@@ -86,7 +86,7 @@ manifold::Manifold CreateSurface(const std::vector<std::array<double, 4>>& heigh
             meshGL.vertProperties.push_back(i * pixelWidth); // y
             meshGL.vertProperties.push_back(0.0);            // z
             meshGL.vertProperties.push_back(0.0);            // r
-            meshGL.vertProperties.push_back(1.0);            // g
+            meshGL.vertProperties.push_back(0.0);            // g
             meshGL.vertProperties.push_back(0.0);            // b
         }
     }
@@ -198,11 +198,7 @@ manifold::Manifold CreateSurface(const std::vector<std::array<double, 4>>& heigh
     return solid;
 }
 
-float linearize(float color) {
-    return (color <= 0.04045) ? (color / 12.92f) : std::pow((color + 0.055f) / 1.055f, 2.4f);
-}
-
-manifold::Manifold readPlyFile(const std::string &filepath, double cell_size, double z_offset, double scale_factor) {
+manifold::Manifold plyToSurface(const std::string &filepath, double cell_size, double z_offset, double scale_factor) {
     // Create a reader for the PLY file
     happly::PLYData plyIn(filepath);
 
