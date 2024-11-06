@@ -148,7 +148,12 @@ manifold::Manifold CreateSurface(const double* vertProperties, int numProps, int
     manifold::MeshGL meshGL;
 
     // Set number of vertex properties based on numProps
-    meshGL.numProp = numProps;
+    meshGL.numProp = numProps + 2;
+    meshGL.vertProperties.reserve(width * height * meshGL.numProp);
+    int numTopBottomTriangles = 2 * (width - 1) * (height - 1);
+    int numEdgeTriangles = 2 * (height - 1) + 2 * (width - 1);
+    int numTriangles = numTopBottomTriangles + numEdgeTriangles;
+    meshGL.triVerts.reserve(numTriangles);
 
     // Generate top surface vertices and properties
     for (int i = 0; i < height; ++i) {
@@ -156,15 +161,17 @@ manifold::Manifold CreateSurface(const double* vertProperties, int numProps, int
             const double* props = &vertProperties[(i * width + j) * numProps];
             double x = j * pixelWidth;
             double y = i * pixelWidth;
-            double z = props[2];  // Height (z)
+            double z = props[0];  // Height (z)
 
             // Add vertex properties (x, y, z)
             meshGL.vertProperties.push_back(x);
             meshGL.vertProperties.push_back(y);
             meshGL.vertProperties.push_back(z);
 
+            cout << x << " " << y << " " << z << endl;
+
             // Add additional properties from index 3 to numProps
-            for (int k = 3; k < numProps; ++k) {
+            for (int k = 1; k < numProps; ++k) {
                 meshGL.vertProperties.push_back(props[k]);
             }
         }
@@ -180,7 +187,7 @@ manifold::Manifold CreateSurface(const double* vertProperties, int numProps, int
             meshGL.vertProperties.push_back(0.0);
 
             // Set remaining properties to 0 from index 3 to numProps
-            for (int k = 3; k < numProps; ++k) {
+            for (int k = 1; k < numProps; ++k) {
                 meshGL.vertProperties.push_back(0.0);
             }
         }
@@ -219,7 +226,69 @@ manifold::Manifold CreateSurface(const double* vertProperties, int numProps, int
         }
     }
 
-    // Additional edge triangles...
+    // Left edge
+    for (int i = 0; i < height - 1; ++i) {
+        int tTop = i * width;
+        int tBottom = (i + 1) * width;
+        int bTop = bottomOffset + tTop;
+        int bBottom = bottomOffset + tBottom;
+
+        meshGL.triVerts.push_back(tTop);
+        meshGL.triVerts.push_back(tBottom);
+        meshGL.triVerts.push_back(bBottom);
+
+        meshGL.triVerts.push_back(tTop);
+        meshGL.triVerts.push_back(bBottom);
+        meshGL.triVerts.push_back(bTop);
+    }
+
+    // Right edge
+    for (int i = 0; i < height - 1; ++i) {
+        int tTop = i * width + (width - 1);
+        int tBottom = (i + 1) * width + (width - 1);
+        int bTop = bottomOffset + tTop;
+        int bBottom = bottomOffset + tBottom;
+
+        meshGL.triVerts.push_back(tTop);
+        meshGL.triVerts.push_back(bBottom);
+        meshGL.triVerts.push_back(tBottom);
+
+        meshGL.triVerts.push_back(tTop);
+        meshGL.triVerts.push_back(bTop);
+        meshGL.triVerts.push_back(bBottom);
+    }
+
+    // Top edge
+    for (int j = 0; j < width - 1; ++j) {
+        int tLeft = j;
+        int tRight = j + 1;
+        int bLeft = bottomOffset + tLeft;
+        int bRight = bottomOffset + tRight;
+
+        meshGL.triVerts.push_back(bLeft);
+        meshGL.triVerts.push_back(bRight);
+        meshGL.triVerts.push_back(tRight);
+
+        meshGL.triVerts.push_back(tLeft);
+        meshGL.triVerts.push_back(bLeft);
+        meshGL.triVerts.push_back(tRight);
+    }
+
+    // Bottom edge
+    for (int j = 0; j < width - 1; ++j) {
+        int tLeft = (height - 1) * width + j;
+        int tRight = (height - 1) * width + j + 1;
+        int bLeft = bottomOffset + tLeft;
+        int bRight = bottomOffset + tRight;
+
+        meshGL.triVerts.push_back(tLeft);
+        meshGL.triVerts.push_back(tRight);
+        meshGL.triVerts.push_back(bRight);
+
+        meshGL.triVerts.push_back(tLeft);
+        meshGL.triVerts.push_back(bRight);
+        meshGL.triVerts.push_back(bLeft);
+    }
 
     // Create and validate the manifold
     manifold::Manifold solid = manifold::Manifold(meshGL);
@@ -291,31 +360,38 @@ manifold::Manifold PlyToSurface(const std::string &filepath, double cell_size, d
             point_count[grid_x][grid_y] += 1;
         }
     }
+    int nProp = 4;
 
     // Initialize vertProperties to store the flattened vertex data
     std::vector<double> vertProperties;
-    vertProperties.reserve(grid_resolution_x * grid_resolution_y * 6);  // Reserve space for x, y, z, r, g, b per cell
+    vertProperties.reserve(grid_resolution_x * grid_resolution_y * nProp);  // Reserve space for z, r, g, b per cell
 
     // Compute the average height and color for each grid cell and populate vertProperties
     for (int i = 0; i < grid_resolution_x; ++i) {
         for (int j = 0; j < grid_resolution_y; ++j) {
-            double avg_z = (point_count[i][j] > 0) ? (z_sum[i][j] / point_count[i][j]) + z_offset : 0.0;
-            double avg_r = (point_count[i][j] > 0) ? (r_sum[i][j] / point_count[i][j]) : 0.0;
-            double avg_g = (point_count[i][j] > 0) ? (g_sum[i][j] / point_count[i][j]) : 0.0;
-            double avg_b = (point_count[i][j] > 0) ? (b_sum[i][j] / point_count[i][j]) : 0.0;
+            if (point_count[i][j] > 0) {
+                // Calculate the average height, apply offset, and set default color
+                double avg_z = (z_sum[i][j] / point_count[i][j]) + z_offset;
+                double avg_r = r_sum[i][j] / point_count[i][j];
+                double avg_g = g_sum[i][j] / point_count[i][j];
+                double avg_b = b_sum[i][j] / point_count[i][j];
+                // Push x, y, z, r, g, b for each grid cell in row-major order
+                vertProperties.push_back(avg_z);  // z
+                vertProperties.push_back(avg_r);  // r
+                vertProperties.push_back(avg_g);  // g
+                vertProperties.push_back(avg_b);  // b
+            } else {
+                vertProperties.push_back(10.0);   // z
+                vertProperties.push_back(0.0);  // r
+                vertProperties.push_back(0.0);  // g
+                vertProperties.push_back(0.0);  // b
+            }
 
-            // Push x, y, z, r, g, b for each grid cell in row-major order
-            vertProperties.push_back(j * cell_size);     // x
-            vertProperties.push_back(i * cell_size);     // y
-            vertProperties.push_back(avg_z);             // z
-            vertProperties.push_back(avg_r);             // r
-            vertProperties.push_back(avg_g);             // g
-            vertProperties.push_back(avg_b);             // b
         }
     }
 
     // Pass vertProperties to CreateSurface as a pointer and specify numProps = 6
-    return CreateSurface(vertProperties.data(), 6, grid_resolution_x, grid_resolution_y, cell_size);
+    return CreateSurface(vertProperties.data(), numProp, grid_resolution_x, grid_resolution_y, cell_size);
 }
 
 
