@@ -15,6 +15,7 @@ import manifold3d.UIntVecVector;
 
 import manifold3d.Manifold;
 import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 @Platform(compiler = "cpp17", include = {"mesh_utils.hpp", "buffer_utils.hpp"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = {"manifold"})
@@ -41,28 +42,36 @@ public class MeshUtils extends Pointer {
         return Polyhedron(verticesPtr, nVertices, faceBufPtr, lengthsPtr, nFaces);
     }
 
-    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height);
-    public static native @ByVal Manifold CreateSurface(@Const DoublePointer heightMap, int width, int height, double pixelWidth);
+    public static native @ByVal Manifold CreateSurface(@Const FloatPointer heightMap, int numProps, int width, int height);
+    public static native @ByVal Manifold CreateSurface(@Const FloatPointer heightMap, int numProps, int width, int height, double pixelWidth);
     public static native @ByVal Manifold CreateSurface(@Const @StdString String filename);
     public static native @ByVal Manifold CreateSurface(@Const @StdString String filename, double pixelWidth);
-    public static Manifold CreateSurface(double[] heightMapArray, int width, int height) {
-        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
-        return CreateSurface(heightMapPtr, width, height);
+    public static Manifold CreateSurface(float[] heightMapArray, int width, int height) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapArray);
+        return CreateSurface(heightMapPtr, 1, width, height);
     }
-    public static Manifold CreateSurface(double[] heightMapArray, int width, int height, double pixelWidth) {
-        DoublePointer heightMapPtr = new DoublePointer(heightMapArray);
-        return CreateSurface(heightMapPtr, width, height, pixelWidth);
+    public static Manifold CreateSurface(float[] heightMapArray, int numProps, int width, int height) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapArray);
+        return CreateSurface(heightMapPtr, numProps, width, height);
+    }
+    public static Manifold CreateSurface(float[] heightMapArray, int numProps, int width, int height, double pixelWidth) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapArray);
+        return CreateSurface(heightMapPtr, numProps, width, height, pixelWidth);
+    }
+    public static Manifold CreateSurface(FloatBuffer heightMapBuffer, int width, int height) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, 1, width, height);
+    }
+    public static Manifold CreateSurface(FloatBuffer heightMapBuffer, int numProps, int width, int height) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, numProps, width, height);
+    }
+    public static Manifold CreateSurface(FloatBuffer heightMapBuffer, int numProps, int width, int height, double pixelWidth) {
+        FloatPointer heightMapPtr = new FloatPointer(heightMapBuffer);
+        return CreateSurface(heightMapPtr, numProps, width, height, pixelWidth);
     }
 
-    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height) {
-        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
-        return CreateSurface(heightMapPtr, width, height);
-    }
-    public static Manifold CreateSurface(DoubleBuffer heightMapBuffer, int width, int height, double pixelWidth) {
-        DoublePointer heightMapPtr = new DoublePointer(heightMapBuffer);
-        return CreateSurface(heightMapPtr, width, height, pixelWidth);
-    }
-
+    public static native @ByVal Manifold PlyToSurface(@Const @StdString String filepath, double cellSize, double zOffset, double scaleFactor);
 
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms);
     public static native @ByVal Manifold Loft(@ByRef SimplePolygon polygon, @ByRef DoubleMat4x3Vector transforms, LoftAlgorithm algorithmEnum);
