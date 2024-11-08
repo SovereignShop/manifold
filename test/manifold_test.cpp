@@ -83,7 +83,7 @@ TEST(Manifold, TextureMesh) {
   //  MeshUtils::CreateSurface(heightMap, width, height) ^ (Manifold::Cube({10, 10, 30}, false));
 
   //Manifold surface = MeshUtils::CreateSurface("/home/john/Documents/property_scan_data/2024_10_27__11_02_02.ply", 10.0)tet;
-  manifold::Manifold surface = MeshUtils::readPlyFile("2024_10_27__11_50_18.ply", 10.0, 20, 304.8);
+  manifold::Manifold surface = MeshUtils::PlyToSurface("2024_10_27__11_50_18.ply", 10.0, 20, 304.8);
   ////MeshUtils::processPlyFile();
   ExportOptions opts;
   Material mat;

@@ -67,7 +67,7 @@ public class ManifoldTest {
         // Define the dimensions of the height map
         int width = 10;
         int height = 10;
-        double[] heightMap = new double[width * height];
+        float[] heightMap = new float[width * height];
         //Arrays.fill(heightMap, 1.0); // Flat surface
 
         double maxHeight = 20;
@@ -77,12 +77,12 @@ public class ManifoldTest {
             for (int x = 0; x < width; x++) {
                 // Create a sine wave pattern
                 double z = Math.sin((double)x / width * 2 * Math.PI) * Math.sin((double)y / height * 2 * Math.PI) * maxHeight;
-                heightMap[x + y * width] = z;
+                heightMap[x + y * width] = (float)z;
             }
         }
 
         // Create a Manifold from the height map
-        Manifold texturedSurface = MeshUtils.CreateSurface(heightMap, width, height, 15.0);
+        Manifold texturedSurface = MeshUtils.CreateSurface(heightMap, 1, width, height, 15.0);
 
         //System.out.println(texturedSurface.status());
         // Export the Manifold to a GLB file
