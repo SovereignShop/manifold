@@ -5,6 +5,11 @@
 
 namespace BufferUtils {
 
+std::vector<float> floatVectorFromPointer(float* data, size_t count) {
+    std::vector<float> vec(data, data + count);
+    return vec;
+}
+
 std::vector<glm::vec2> createDoubleVec2Vector(double* values, std::size_t count) {
     std::vector<glm::vec2> result(count / 2);
 
