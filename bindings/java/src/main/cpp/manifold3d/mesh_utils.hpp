@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <stdexcept>
 #include <glm/glm.hpp>
 #include <vector>
@@ -266,6 +267,33 @@ manifold::Manifold PlyToSurface(const std::string &filepath, double cellSize, do
 
     // Pass vertProperties to CreateSurface as a pointer and specify numProps = 6
     return CreateSurface(vertProperties.data(), nProp, grid_resolution_x, grid_resolution_y, cellSize);
+}
+
+manifold::Manifold ColorVertices(const manifold::Manifold& man, const glm::vec4 color, size_t propIndex = 3) {
+    manifold::MeshGL mesh = man.GetMeshGL();
+    const std::vector<float>& vertProps = mesh.vertProperties;
+    int numProps = mesh.numProp;
+
+    size_t numNewProps = std::max(propIndex + 4, static_cast<size_t>(numProps));
+    std::vector<float> newVertProps;
+    newVertProps.resize(numNewProps * mesh.NumVert());
+
+    for (size_t i = 0; i < mesh.NumVert(); ++i) {
+        for (size_t j = 0; j < numProps; ++j) {
+            newVertProps[i * numNewProps + j] = vertProps[i * numProps + j];
+        }
+
+        for (size_t j = 0; j < 4; ++j) {
+            newVertProps[i * numNewProps + propIndex + j] = color[j];
+        }
+    }
+
+    manifold::MeshGL newMesh;
+    newMesh.vertProperties = std::move(newVertProps);
+    newMesh.numProp = numNewProps;
+    newMesh.triVerts = mesh.triVerts;
+
+    return manifold::Manifold(newMesh);
 }
 
 

@@ -6,6 +6,7 @@ import org.bytedeco.javacpp.annotation.*;
 import manifold3d.LibraryPaths;
 import manifold3d.manifold.CrossSectionVector;
 import manifold3d.manifold.CrossSection;
+import manifold3d.glm.DoubleVec4;
 import manifold3d.glm.DoubleVec3Vector;
 import manifold3d.glm.DoubleMat4x3Vector;
 import manifold3d.pub.PolygonsVector;
@@ -42,6 +43,8 @@ public class MeshUtils extends Pointer {
         return Polyhedron(verticesPtr, nVertices, faceBufPtr, lengthsPtr, nFaces);
     }
 
+    public static native @ByVal Manifold ColorVertices(@Const @ByRef Manifold manifold, @Const @ByRef DoubleVec4 rgba);
+    public static native @ByVal Manifold ColorVertices(@Const @ByRef Manifold manifold, @Const @ByRef DoubleVec4 rgba, long propIndex);
     public static native @ByVal Manifold CreateSurface(@Const FloatPointer heightMap, int numProps, int width, int height);
     public static native @ByVal Manifold CreateSurface(@Const FloatPointer heightMap, int numProps, int width, int height, double pixelWidth);
     public static native @ByVal Manifold CreateSurface(@Const @StdString String filename);
