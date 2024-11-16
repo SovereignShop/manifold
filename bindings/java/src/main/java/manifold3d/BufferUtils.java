@@ -15,7 +15,7 @@ public class BufferUtils extends Pointer {
 
     public BufferUtils() { }
 
-    public static native @ByVal FloatVector floatVectorFromPointer(FloatPointer values, @Cast("std::size_t") long count)
+    public static native @ByVal FloatVector floatVectorFromPointer(FloatPointer values, @Cast("std::size_t") long count);
     public static native @ByVal SimplePolygon createDoubleVec2Vector(DoublePointer values, @Cast("std::size_t") long count);
     public static native @ByVal DoubleVec3Vector createDoubleVec3Vector(DoublePointer values, @Cast("std::size_t") long count);
     public static native @ByVal IntegerVec3Vector createIntegerVec3Vector(IntPointer values, @Cast("std::size_t") long count);
