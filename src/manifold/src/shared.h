@@ -22,7 +22,7 @@
 namespace manifold {
 
 /** @addtogroup Private
- *  @{
+ *  @lf{
  */
 inline glm::vec3 SafeNormalize(glm::vec3 v) {
   v = glm::normalize(v);

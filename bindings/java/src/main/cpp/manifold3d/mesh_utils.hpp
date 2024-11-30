@@ -321,6 +321,31 @@ manifold::Manifold CreateSurface(const std::string& texturePath, double pixelWid
     return CreateSurface(propertyMap.data(), numProps, width, height, pixelWidth);
 }
 
+manifold::Manifold LoadImage(const std::string& texturePath, const float depth, double pixelWidth = 1.0) {
+    // Load the texture image in its original format to determine channels
+    int width, height, channels;
+    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);  // 0 keeps original channels
+    if (!data) {
+        throw std::runtime_error("Failed to load texture image.");
+    }
+
+    // Set the number of properties based on the image format
+    int numProps = channels + 1;
+
+    // Create a property map from the texture data
+    std::vector<float> propertyMap(width * height * numProps);
+    for (int i = 0; i < width * height; ++i) {
+        propertyMap[i * numProps] = depth;
+        for (int c = 1; c < channels; ++c) {
+            propertyMap[i * numProps + c] = static_cast<float>(data[i * channels + c]) / 255.0f;  // Normalize to [0, 1]
+        }
+    }
+    stbi_image_free(data); // Free the image data
+
+    // Invoke the overloaded CreateSurface function with the property map and numProps
+    return CreateSurface(propertyMap.data(), numProps, width, height, pixelWidth);
+}
+
 std::vector<glm::ivec3> TriangulateFaces(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces, float precision) {
     std::vector<glm::ivec3> result;
     for (const auto& face : faces) {
