@@ -8,6 +8,7 @@ import manifold3d.pub.DoubleMesh;
 
 import manifold3d.UIntVector;
 import manifold3d.FloatVector;
+import manifold3d.IntVector;
 
 import java.io.IOException;
 import java.io.File;
@@ -199,6 +200,9 @@ public class Manifold extends Pointer {
     @Name("RefineToLength")
     public native @ByVal Manifold refineToLength(float length);
 
+    public native @ByVal FloatVector getFaceNormals();
+    public native @ByVal IntVector getHalfedges();
+
     @Name("BatchBoolean")
     public static native @ByVal Manifold BatchBoolean(@ByRef ManifoldVector manifolds, @Cast("manifold::OpType") int op);
 
@@ -219,5 +223,6 @@ public class Manifold extends Pointer {
     public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments);
     public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments, float revolveDegrees);
     public static native @ByVal Manifold Compose(@ByRef ManifoldVector manifolds);
+
 
 }

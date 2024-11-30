@@ -938,6 +938,36 @@ Manifold Manifold::Hull(const std::vector<glm::vec3>& pts) {
 }
 
 /**
+ * Get half edges.
+ **/
+std::vector<int> Manifold::GetHalfedges() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const manifold::Vec<Halfedge> halfedges = impl.halfedge_;
+  std::vector<int> ret;
+  ret.reserve(halfedges.size());
+  for (auto& halfedge: halfedges) {
+    ret.push_back(halfedge.startVert);
+    ret.push_back(halfedge.endVert);
+    ret.push_back(halfedge.pairedHalfedge);
+    ret.push_back(halfedge.face);
+  }
+  return ret;
+}
+
+std::vector<float> Manifold::GetFaceNormals() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<glm::vec3> faceNormals = impl.faceNormal_;
+  std::vector<float> ret;
+  ret.reserve(faceNormals.size());
+  for (auto& normal: faceNormals) {
+    ret.push_back(normal[0]);
+    ret.push_back(normal[1]);
+    ret.push_back(normal[2]);
+  }
+  return ret;
+}
+
+/**
  * Compute the convex hull of this manifold.
  */
 Manifold Manifold::Hull() const { return Hull(GetMesh().vertPos); }
