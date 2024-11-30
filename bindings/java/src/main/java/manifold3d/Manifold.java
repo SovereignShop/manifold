@@ -200,7 +200,9 @@ public class Manifold extends Pointer {
     @Name("RefineToLength")
     public native @ByVal Manifold refineToLength(float length);
 
+    @Name("GetFaceNormals")
     public native @ByVal FloatVector getFaceNormals();
+    @Name("GetHalfedges")
     public native @ByVal IntVector getHalfedges();
 
     @Name("BatchBoolean")
