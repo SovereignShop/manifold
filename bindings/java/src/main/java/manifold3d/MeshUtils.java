@@ -43,6 +43,9 @@ public class MeshUtils extends Pointer {
         return Polyhedron(verticesPtr, nVertices, faceBufPtr, lengthsPtr, nFaces);
     }
 
+    public static native @ByVal Manifold LoadImage(@Const @StdString String filename, float depth);
+    public static native @ByVal Manifold LoadImage(@Const @StdString String filename, float depth, double pixelWidth);
+
     public static native @ByVal Manifold ColorVertices(@Const @ByRef Manifold manifold, @Const @ByRef DoubleVec4 rgba);
     public static native @ByVal Manifold ColorVertices(@Const @ByRef Manifold manifold, @Const @ByRef DoubleVec4 rgba, long propIndex);
     public static native @ByVal Manifold CreateSurface(@Const FloatPointer heightMap, int numProps, int width, int height);
