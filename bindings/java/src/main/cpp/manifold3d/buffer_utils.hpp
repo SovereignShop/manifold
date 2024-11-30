@@ -5,6 +5,14 @@
 
 namespace BufferUtils {
 
+
+std::vector<int> intVectorFromPointer(int* data, size_t count) {
+    std::vector<int> vec(data, data + count);
+    return vec;
+}
+
+
+
 std::vector<float> floatVectorFromPointer(float* data, size_t count) {
     std::vector<float> vec(data, data + count);
     return vec;
