@@ -967,6 +967,34 @@ std::vector<float> Manifold::GetFaceNormals() const {
   return ret;
 }
 
+
+std::vector<float> Manifold::GetVertices() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<glm::vec3> verts = impl.vertPos_;
+  std::vector<float> ret;
+  ret.reserve(verts.size());
+  for (auto& vert: verts) {
+    ret.push_back(vert[0]);
+    ret.push_back(vert[1]);
+    ret.push_back(vert[2]);
+  }
+  return ret;
+}
+
+std::vector<int> Manifold::GetTriangles() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<glm::ivec3> triVerts = impl.meshRelation_.triProperties;
+  std::vector<int> ret;
+  ret.reserve(triVerts.size());
+  for (auto& triVert: triVerts) {
+    ret.push_back(triVert[0]);
+    ret.push_back(triVert[1]);
+    ret.push_back(triVert[2]);
+  }
+  return ret;
+
+}
+
 /**
  * Compute the convex hull of this manifold.
  */
