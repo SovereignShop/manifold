@@ -204,6 +204,10 @@ public class Manifold extends Pointer {
     public native @ByVal FloatVector getFaceNormals();
     @Name("GetHalfedges")
     public native @ByVal IntVector getHalfedges();
+    @Name("GetVertices")
+    public native @ByVal FloatVector getVertices();
+    @Name("GetTriangles")
+    public native @ByVal IntVector getTriangles();
 
     @Name("BatchBoolean")
     public static native @ByVal Manifold BatchBoolean(@ByRef ManifoldVector manifolds, @Cast("manifold::OpType") int op);

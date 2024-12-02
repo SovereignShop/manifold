@@ -289,6 +289,9 @@ class Manifold {
 
   std::vector<int> GetHalfedges() const;
   std::vector<float> GetFaceNormals() const;
+  std::vector<int> GetTriangles() const;
+  std::vector<float> GetVertices() const;
+
   ///@}
 
   /** @name Testing hooks
