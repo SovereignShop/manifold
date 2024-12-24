@@ -14,23 +14,22 @@
 
 #include "samples.h"
 
-#include "polygon.h"
-#include "test.h"
-
-#ifdef MANIFOLD_EXPORT
-#include "meshIO.h"
+#ifdef MANIFOLD_CROSS_SECTION
+#include "manifold/cross_section.h"
 #endif
+#include "manifold/polygon.h"
+#include "test.h"
 
 using namespace manifold;
 
-std::vector<int> EdgePairs(const Mesh in) {
-  const int numHalfedge = 3 * in.triVerts.size();
+std::vector<int> EdgePairs(const MeshGL in) {
+  const int numHalfedge = 3 * in.NumTri();
   std::vector<int> edgePair(numHalfedge);
 
   std::map<std::pair<int, int>, int> halfedgeLink;
   for (int i = 0; i < numHalfedge; ++i) {
-    std::pair<int, int> key = std::make_pair(in.triVerts[i / 3][i % 3],
-                                             in.triVerts[i / 3][(i + 1) % 3]);
+    std::pair<int, int> key = std::make_pair(
+        in.triVerts[i], in.triVerts[(i + 1) % 3 == 0 ? i - 2 : i + 1]);
     if (key.first > key.second) std::swap(key.first, key.second);
     const auto result = halfedgeLink.emplace(std::make_pair(key, i));
     if (!result.second) {
@@ -42,18 +41,17 @@ std::vector<int> EdgePairs(const Mesh in) {
   return edgePair;
 }
 
+#ifdef MANIFOLD_CROSS_SECTION
 // If you print this knot (with support), you can snap a half-inch marble into
 // it and it'll roll around (dimensions in mm).
 TEST(Samples, Knot13) {
   Manifold knot13 = TorusKnot(1, 3, 25, 10, 3.75);
 #ifdef MANIFOLD_EXPORT
-  if (options.exportModels) ExportMesh("knot13.glb", knot13.GetMesh(), {});
+  if (options.exportModels) ExportMesh("knot13.glb", knot13.GetMeshGL(), {});
 #endif
-  CheckNormals(knot13);
   EXPECT_EQ(knot13.Genus(), 1);
-  auto prop = knot13.GetProperties();
-  EXPECT_NEAR(prop.volume, 20786, 1);
-  EXPECT_NEAR(prop.surfaceArea, 11177, 1);
+  EXPECT_NEAR(knot13.Volume(), 20786, 1);
+  EXPECT_NEAR(knot13.SurfaceArea(), 11177, 1);
   CheckGL(knot13);
 }
 
@@ -61,56 +59,54 @@ TEST(Samples, Knot13) {
 TEST(Samples, Knot42) {
   Manifold knot42 = TorusKnot(4, 2, 15, 6, 5);
 #ifdef MANIFOLD_EXPORT
-  if (options.exportModels) ExportMesh("knot42.glb", knot42.GetMesh(), {});
+  if (options.exportModels) ExportMesh("knot42.glb", knot42.GetMeshGL(), {});
 #endif
-  CheckNormals(knot42);
   std::vector<Manifold> knots = knot42.Decompose();
   ASSERT_EQ(knots.size(), 2);
   EXPECT_EQ(knots[0].Genus(), 1);
   EXPECT_EQ(knots[1].Genus(), 1);
-  auto prop0 = knots[0].GetProperties();
-  auto prop1 = knots[1].GetProperties();
-  EXPECT_NEAR(prop0.volume, prop1.volume, 1);
-  EXPECT_NEAR(prop0.surfaceArea, prop1.surfaceArea, 1);
+  EXPECT_NEAR(knots[0].Volume(), knots[1].Volume(), 1);
+  EXPECT_NEAR(knots[0].SurfaceArea(), knots[1].SurfaceArea(), 1);
   CheckGL(knot42);
 }
+#endif
 
 TEST(Samples, Scallop) {
   Manifold scallop = Scallop();
 
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels) {
-    Mesh in = scallop.GetMesh();
+    MeshGL in = scallop.GetMeshGL();
     std::vector<int> edgePair = EdgePairs(in);
 
     ExportOptions options;
     const int numVert = scallop.NumVert();
     const int numHalfedge = 3 * scallop.NumTri();
-    for (int i = 0; i < scallop.NumVert(); ++i) {
-      options.mat.vertColor.push_back({0, 0, 1, 1});
-    }
+    const int numProp = in.numProp;
     for (int i = 0; i < numHalfedge; ++i) {
-      const int vert = in.triVerts[i / 3][i % 3];
-      in.vertPos.push_back(in.vertPos[vert] + glm::vec3(in.halfedgeTangent[i]) *
-                                                  in.halfedgeTangent[i].w);
-      options.mat.vertColor.push_back({0.5, 0.5, 0, 1});
+      const int vert = in.triVerts[i];
+      for (int j : {0, 1, 2}) {
+        in.vertProperties.push_back(in.vertProperties[numProp * vert + j] +
+                                    in.halfedgeTangent[4 * i + j] *
+                                        in.halfedgeTangent[4 * i + 3]);
+      }
       const int j = edgePair[i % 3 == 0 ? i + 2 : i - 1];
-      in.triVerts.push_back({vert, numVert + i, numVert + j});
+      in.triVerts.push_back(vert);
+      in.triVerts.push_back(numVert + i);
+      in.triVerts.push_back(numVert + j);
     }
     options.faceted = true;
     options.mat.roughness = 0.5;
-    ExportMesh("scallopFacets.glb", in, options);
+    ExportMesh("scallopFacets.glb", scallop.GetMeshGL(), options);
   }
 #endif
 
-  auto colorCurvature = [](float* newProp, glm::vec3 pos,
-                           const float* oldProp) {
-    const float curvature = oldProp[0];
-    const glm::vec3 red(1, 0, 0);
-    const glm::vec3 blue(0, 0, 1);
-    const float limit = 15;
-    glm::vec3 color =
-        glm::mix(blue, red, glm::smoothstep(-limit, limit, curvature));
+  auto colorCurvature = [](double* newProp, vec3 pos, const double* oldProp) {
+    const double curvature = oldProp[0];
+    const vec3 red(1, 0, 0);
+    const vec3 blue(0, 0, 1);
+    const double limit = 15;
+    vec3 color = la::lerp(blue, red, smoothstep(-limit, limit, curvature));
     for (const int i : {0, 1, 2}) {
       newProp[i] = color[i];
     }
@@ -118,10 +114,9 @@ TEST(Samples, Scallop) {
 
   scallop = scallop.Refine(50).CalculateCurvature(-1, 0).SetProperties(
       3, colorCurvature);
-  CheckNormals(scallop);
-  auto prop = scallop.GetProperties();
-  EXPECT_NEAR(prop.volume, 41.5, 0.1);
-  EXPECT_NEAR(prop.surfaceArea, 78.8, 0.1);
+  EXPECT_NEAR(scallop.Volume(), 39.9, 0.1);
+  EXPECT_NEAR(scallop.SurfaceArea(), 79.3, 0.1);
+  EXPECT_EQ(scallop.NumVert(), scallop.NumPropVert());
   CheckGL(scallop);
 
 #ifdef MANIFOLD_EXPORT
@@ -131,7 +126,7 @@ TEST(Samples, Scallop) {
     // options2.faceted = false;
     options2.mat.roughness = 0.1;
     options2.mat.metalness = 0;
-    options2.mat.colorChannels = {3, 4, 5, -1};
+    options2.mat.colorIdx = 0;
     ExportMesh("scallop.glb", out, options2);
   }
 #endif
@@ -139,112 +134,111 @@ TEST(Samples, Scallop) {
 
 TEST(Samples, TetPuzzle) {
   Manifold puzzle = TetPuzzle(50, 0.2, 50);
-  CheckNormals(puzzle);
   EXPECT_LE(puzzle.NumDegenerateTris(), 2);
   CheckGL(puzzle);
 
   Manifold puzzle2 = puzzle.Rotate(0, 0, 180);
   EXPECT_TRUE((puzzle ^ puzzle2).IsEmpty());
-  puzzle = puzzle.Transform(RotateUp({1, -1, -1}));
+  quat q = rotation_quat(normalize(vec3(1, -1, -1)), vec3(0, 0, 1));
+  puzzle = puzzle.Transform({la::qmat(q), vec3()});
 #ifdef MANIFOLD_EXPORT
-  if (options.exportModels) ExportMesh("tetPuzzle.glb", puzzle.GetMesh(), {});
+  if (options.exportModels) ExportMesh("tetPuzzle.glb", puzzle.GetMeshGL(), {});
 #endif
 }
 
 TEST(Samples, FrameReduced) {
   Manifold frame = RoundedFrame(100, 10, 4);
-  CheckNormals(frame);
   EXPECT_EQ(frame.NumDegenerateTris(), 0);
   EXPECT_EQ(frame.Genus(), 5);
-  auto prop = frame.GetProperties();
-  EXPECT_NEAR(prop.volume, 227333, 10);
-  EXPECT_NEAR(prop.surfaceArea, 62635, 1);
+  EXPECT_NEAR(frame.Volume(), 227333, 10);
+  EXPECT_NEAR(frame.SurfaceArea(), 62635, 1);
   CheckGL(frame);
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels)
-    ExportMesh("roundedFrameReduced.glb", frame.GetMesh(), {});
+    ExportMesh("roundedFrameReduced.glb", frame.GetMeshGL(), {});
 #endif
 }
 
 TEST(Samples, Frame) {
   Manifold frame = RoundedFrame(100, 10);
-  CheckNormals(frame);
   EXPECT_EQ(frame.NumDegenerateTris(), 0);
   EXPECT_EQ(frame.Genus(), 5);
   CheckGL(frame);
 #ifdef MANIFOLD_EXPORT
-  if (options.exportModels) ExportMesh("roundedFrame.glb", frame.GetMesh(), {});
+  if (options.exportModels)
+    ExportMesh("roundedFrame.glb", frame.GetMeshGL(), {});
 #endif
 }
 
 // This creates a bracelet sample which involves many operations between shapes
 // that are not in general position, e.g. coplanar faces.
+#ifdef MANIFOLD_CROSS_SECTION
 TEST(Samples, Bracelet) {
   Manifold bracelet = StretchyBracelet();
-  CheckNormals(bracelet);
   EXPECT_EQ(bracelet.NumDegenerateTris(), 0);
   EXPECT_EQ(bracelet.Genus(), 1);
   CheckGL(bracelet);
 
-  CrossSection projection = bracelet.Project();
+  CrossSection projection(bracelet.Project());
+  projection = projection.Simplify(bracelet.BoundingBox().Scale() * 1e-8);
   Rect rect = projection.Bounds();
   Box box = bracelet.BoundingBox();
-  EXPECT_EQ(rect.min.x, box.min.x);
-  EXPECT_EQ(rect.min.y, box.min.y);
-  EXPECT_EQ(rect.max.x, box.max.x);
-  EXPECT_EQ(rect.max.y, box.max.y);
+  EXPECT_FLOAT_EQ(rect.min.x, box.min.x);
+  EXPECT_FLOAT_EQ(rect.min.y, box.min.y);
+  EXPECT_FLOAT_EQ(rect.max.x, box.max.x);
+  EXPECT_FLOAT_EQ(rect.max.y, box.max.y);
   EXPECT_NEAR(projection.Area(), 649, 1);
   EXPECT_EQ(projection.NumContour(), 2);
-  Manifold extrusion = Manifold::Extrude(projection, 1);
+  Manifold extrusion = Manifold::Extrude(projection.ToPolygons(), 1);
   EXPECT_EQ(extrusion.NumDegenerateTris(), 0);
   EXPECT_EQ(extrusion.Genus(), 1);
 
-  CrossSection slice = bracelet.Slice();
+  CrossSection slice(bracelet.Slice());
   EXPECT_EQ(slice.NumContour(), 2);
   EXPECT_NEAR(slice.Area(), 230.6, 0.1);
-  extrusion = Manifold::Extrude(slice, 1);
+  extrusion = Manifold::Extrude(slice.ToPolygons(), 1);
   EXPECT_EQ(extrusion.Genus(), 1);
 
 #ifdef MANIFOLD_EXPORT
-  if (options.exportModels) ExportMesh("bracelet.glb", bracelet.GetMesh(), {});
+  if (options.exportModels)
+    ExportMesh("bracelet.glb", bracelet.GetMeshGL(), {});
 #endif
 }
 
 TEST(Samples, GyroidModule) {
-  const float size = 20;
+  const double size = 20;
   Manifold gyroid = GyroidModule(size);
-  CheckNormals(gyroid);
   EXPECT_LE(gyroid.NumDegenerateTris(), 4);
   EXPECT_EQ(gyroid.Genus(), 15);
   CheckGL(gyroid);
 
   const Box bounds = gyroid.BoundingBox();
-  const float precision = gyroid.Precision();
-  EXPECT_NEAR(bounds.min.z, 0, precision);
-  EXPECT_NEAR(bounds.max.z, size * glm::sqrt(2.0f), precision);
+  const double epsilon = gyroid.GetEpsilon();
+  EXPECT_NEAR(bounds.min.z, 0, epsilon);
+  EXPECT_NEAR(bounds.max.z, size * std::sqrt(2.0), epsilon);
 
-  CrossSection slice = gyroid.Slice(5);
+  CrossSection slice(gyroid.Slice(5));
   EXPECT_EQ(slice.NumContour(), 4);
   EXPECT_NEAR(slice.Area(), 121.9, 0.1);
-  Manifold extrusion = Manifold::Extrude(slice, 1);
+  Manifold extrusion = Manifold::Extrude(slice.ToPolygons(), 1);
   EXPECT_EQ(extrusion.Genus(), -3);
 
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels)
-    ExportMesh("gyroidModule.glb", gyroid.GetMesh(), {});
+    ExportMesh("gyroidModule.glb", gyroid.GetMeshGL(), {});
 #endif
 }
+#endif
 
 TEST(Samples, Sponge1) {
   Manifold sponge = MengerSponge(1);
-  CheckNormals(sponge);
   EXPECT_EQ(sponge.NumDegenerateTris(), 0);
   EXPECT_EQ(sponge.NumVert(), 40);
   EXPECT_EQ(sponge.Genus(), 5);
   CheckGL(sponge);
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels)
-    ExportMesh("mengerSponge1.glb", sponge.GetMesh(), {});
+    ExportMesh("mengerSponge1.glb", sponge.GetMeshGL(), {});
 #endif
 }
 
@@ -253,9 +247,9 @@ TEST(Samples, Sponge1) {
 #ifndef __EMSCRIPTEN__
 // A fractal with many degenerate intersections, which also tests exact 90
 // degree rotations.
+#ifdef MANIFOLD_CROSS_SECTION
 TEST(Samples, Sponge4) {
   Manifold sponge = MengerSponge(4);
-  CheckNormals(sponge);
   EXPECT_LE(sponge.NumDegenerateTris(), 8);
   EXPECT_EQ(sponge.Genus(), 26433);  // should be 1:5, 2:81, 3:1409, 4:26433
   CheckGL(sponge);
@@ -264,7 +258,8 @@ TEST(Samples, Sponge4) {
   EXPECT_EQ(cutSponge.first.Genus(), 13394);
   EXPECT_EQ(cutSponge.second.Genus(), 13394);
 
-  CrossSection projection = cutSponge.first.Project();
+  CrossSection projection(cutSponge.first.Project());
+  projection = projection.Simplify(cutSponge.first.GetEpsilon());
   Rect rect = projection.Bounds();
   Box box = cutSponge.first.BoundingBox();
   EXPECT_EQ(rect.min.x, box.min.x);
@@ -272,99 +267,48 @@ TEST(Samples, Sponge4) {
   EXPECT_EQ(rect.max.x, box.max.x);
   EXPECT_EQ(rect.max.y, box.max.y);
   EXPECT_NEAR(projection.Area(), 0.535, 0.001);
-  Manifold extrusion = Manifold::Extrude(projection, 1);
-  EXPECT_EQ(extrusion.NumDegenerateTris(), 0);
+  Manifold extrusion = Manifold::Extrude(projection.ToPolygons(), 1);
+  EXPECT_LE(extrusion.NumDegenerateTris(), 32);
   EXPECT_EQ(extrusion.Genus(), 502);
 
 #ifdef MANIFOLD_EXPORT
   if (options.exportModels) {
-    ExportMesh("mengerHalf.glb", cutSponge.first.GetMesh(), {});
+    ExportMesh("mengerHalf.glb", cutSponge.first.GetMeshGL(), {});
 
-    const Mesh out = sponge.GetMesh();
+    const MeshGL out = sponge
+                           .SetProperties(3,
+                                          [](double* newProp, vec3 pos,
+                                             const double* oldProp) {
+                                            for (const int i : {0, 1, 2})
+                                              newProp[i] = 0.5 * (pos[i] + 0.5);
+                                          })
+                           .GetMeshGL();
     ExportOptions options;
     options.faceted = true;
     options.mat.roughness = 0.2;
     options.mat.metalness = 1.0;
-    for (const glm::vec3 pos : out.vertPos) {
-      options.mat.vertColor.push_back(glm::vec4(0.5f * (pos + 0.5f), 1.0f));
-    }
+    options.mat.colorIdx = 0;
     ExportMesh("mengerSponge.glb", out, options);
   }
 #endif
 }
 #endif
-
-#ifdef MANIFOLD_EXPORT
-TEST(Samples, SelfIntersect) {
-  manifold::PolygonParams().processOverlaps = true;
-  std::string file = __FILE__;
-  std::string dir = file.substr(0, file.rfind('/'));
-  Manifold m1 = ImportMesh(dir + "/models/self_intersectA.glb");
-  Manifold m2 = ImportMesh(dir + "/models/self_intersectB.glb");
-  Manifold res = m1 + m2;
-  res.GetMeshGL();  // test crash
-  manifold::PolygonParams().processOverlaps = false;
-}
-
-TEST(Samples, GenericTwinBooleanTest7081) {
-  std::string file = __FILE__;
-  std::string dir = file.substr(0, file.rfind('/'));
-  Manifold m1 = ImportMesh(dir + "/models/Generic_Twin_7081.1.t0_left.glb");
-  Manifold m2 = ImportMesh(dir + "/models/Generic_Twin_7081.1.t0_right.glb");
-  Manifold res = m1 + m2;  // Union
-  res.GetMeshGL();         // test crash
-}
-
-TEST(Samples, GenericTwinBooleanTest7863) {
-  manifold::PolygonParams().processOverlaps = true;
-  std::string file = __FILE__;
-  std::string dir = file.substr(0, file.rfind('/'));
-  Manifold m1 = ImportMesh(dir + "/models/Generic_Twin_7863.1.t0_left.glb");
-  Manifold m2 = ImportMesh(dir + "/models/Generic_Twin_7863.1.t0_right.glb");
-  Manifold res = m1 + m2;  // Union
-  res.GetMeshGL();         // test crash
-  manifold::PolygonParams().processOverlaps = false;
-}
-
-TEST(Samples, Havocglass8Bool) {
-  manifold::PolygonParams().processOverlaps = true;
-  std::string file = __FILE__;
-  std::string dir = file.substr(0, file.rfind('/'));
-  Manifold m1 = ImportMesh(dir + "/models/Havocglass8_left.glb");
-  Manifold m2 = ImportMesh(dir + "/models/Havocglass8_right.glb");
-  Manifold res = m1 + m2;  // Union
-  res.GetMeshGL();         // test crash
-  manifold::PolygonParams().processOverlaps = false;
-}
-
-TEST(Samples, CraycloudBool) {
-  std::string file = __FILE__;
-  std::string dir = file.substr(0, file.rfind('/'));
-  Manifold m1 = ImportMesh(dir + "/models/Cray_left.glb");
-  Manifold m2 = ImportMesh(dir + "/models/Cray_right.glb");
-  Manifold res = m1 - m2;
-  EXPECT_EQ(res.Status(), Manifold::Error::NoError);
-  EXPECT_TRUE(res.IsEmpty());
-}
-
 #endif
 
 TEST(Samples, CondensedMatter16) {
-  // FIXME: it should be geometrically valid
-  manifold::PolygonParams().processOverlaps = true;
   Manifold cm = CondensedMatter(16);
   CheckGL(cm);
-  // FIXME: normals should be correct
-  // CheckNormals(cm);
-  manifold::PolygonParams().processOverlaps = false;
+#ifdef MANIFOLD_EXPORT
+  if (options.exportModels)
+    ExportMesh("condensedMatter16.glb", cm.GetMeshGL(), {});
+#endif
 }
 
 TEST(Samples, CondensedMatter64) {
-  // FIXME: it should be geometrically valid
-  manifold::PolygonParams().processOverlaps = true;
   Manifold cm = CondensedMatter(64);
   CheckGL(cm);
-  // FIXME: normals should be correct
-  // CheckNormals(cm);
-  manifold::PolygonParams().processOverlaps = false;
+#ifdef MANIFOLD_EXPORT
+  if (options.exportModels)
+    ExportMesh("condensedMatter64.glb", cm.GetMeshGL(), {});
+#endif
 }

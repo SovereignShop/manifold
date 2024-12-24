@@ -12,11 +12,94 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# do not add third_party installations
-add_subdirectory(third_party EXCLUDE_FROM_ALL)
-add_subdirectory(utilities)
-add_subdirectory(collider)
-add_subdirectory(cross_section)
-add_subdirectory(polygon)
-add_subdirectory(manifold)
-add_subdirectory(sdf)
+set(
+  MANIFOLD_SRCS
+  boolean3.cpp
+  boolean_result.cpp
+  constructors.cpp
+  csg_tree.cpp
+  edge_op.cpp
+  face_op.cpp
+  impl.cpp
+  manifold.cpp
+  polygon.cpp
+  properties.cpp
+  quickhull.cpp
+  sdf.cpp
+  smoothing.cpp
+  sort.cpp
+  subdivision.cpp
+  # optional source files
+  $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:cross_section/cross_section.cpp>
+  $<$<BOOL:${MANIFOLD_EXPORT}>:meshIO/meshIO.cpp>
+)
+
+set(
+  MANIFOLD_PRIVATE_HDRS
+  boolean3.h
+  collider.h
+  csg_tree.h
+  hashtable.h
+  impl.h
+  iters.h
+  mesh_fixes.h
+  parallel.h
+  quickhull.h
+  shared.h
+  sparse.h
+  svd.h
+  tri_dist.h
+  utils.h
+  vec.h
+)
+
+# Include directories
+set(MANIFOLD_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include)
+
+add_library(manifold ${MANIFOLD_SRCS} ${MANIFOLD_PRIVATE_HDRS})
+
+target_link_libraries(manifold PUBLIC $<$<BOOL:${TRACY_ENABLE}>:TracyClient>)
+
+target_link_libraries(
+  manifold
+  PRIVATE
+    # optional dependencies
+    $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
+    $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:Clipper2::Clipper2>
+    $<$<BOOL:${MANIFOLD_EXPORT}>:assimp::assimp>
+)
+
+target_compile_options(manifold PRIVATE ${MANIFOLD_FLAGS})
+# make sure users use appropriate c++ standard when including our headers
+target_compile_features(manifold PUBLIC cxx_std_17)
+set(
+  OPTIONS
+  MANIFOLD_DEBUG
+  MANIFOLD_CROSS_SECTION
+  MANIFOLD_EXPORT
+  TRACY_ENABLE
+  TRACY_MEMORY_USAGE
+)
+foreach(OPT IN LISTS OPTIONS)
+  if(${${OPT}})
+    target_compile_options(manifold PUBLIC -D${OPT})
+  endif()
+endforeach()
+if(MANIFOLD_PAR)
+  target_compile_options(manifold PUBLIC -DMANIFOLD_PAR=1)
+else()
+  target_compile_options(manifold PUBLIC -DMANIFOLD_PAR=-1)
+endif()
+
+target_include_directories(
+  manifold
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+  PRIVATE ${MANIFOLD_INCLUDE_DIRS}
+)
+
+exportlib(manifold)
+
+install(TARGETS manifold EXPORT manifoldTargets)

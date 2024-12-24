@@ -15,7 +15,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "manifold.h"
+#include "manifold/manifold.h"
 
 using namespace manifold;
 
@@ -23,7 +23,7 @@ using namespace manifold;
   Build & execute with the following command:
 
   ( mkdir -p build && cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DMANIFOLD_PAR=TBB .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DMANIFOLD_PAR=ON .. && \
     make -j && \
     time ./extras/largeSceneTest 50 )
 */
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
       for (int k = 0; k < n; ++k) {
         if (i == 0 && j == 0 && k == 0) continue;
 
-        Manifold sphere = Manifold::Sphere(1).Translate(glm::vec3(i, j, k));
+        Manifold sphere = Manifold::Sphere(1).Translate(vec3(i, j, k));
         scene = scene.Boolean(sphere, OpType::Add);
       }
     }

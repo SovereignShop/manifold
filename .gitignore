@@ -112,11 +112,24 @@ node_modules/
 bindings/wasm/examples/built
 bindings/wasm/examples/dist
 bindings/wasm/examples/public/manifold*
+bindings/wasm/docs
 __pycache__
 .vscode/c_cpp_properties.json
 *.sublime-project
 *.sublime-workspace
 .cache
+CMakeUserPresets.json
+CMakeSettings.json
 
 # PyCharm
 .idea
+
+# Temporary files
+*~
+\#*\#
+.\#*
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+

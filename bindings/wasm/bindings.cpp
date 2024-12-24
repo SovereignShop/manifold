@@ -17,35 +17,56 @@
 
 #include <vector>
 
-#include "cross_section.h"
 #include "helpers.cpp"
-#include "manifold.h"
-#include "polygon.h"
-#include "sdf.h"
+#include "manifold/cross_section.h"
+#include "manifold/manifold.h"
+#include "manifold/polygon.h"
+
+#if (MANIFOLD_PAR == 1)
+#include <tbb/parallel_for.h>
+
+#include <atomic>
+#endif
+
+// https://github.com/oneapi-src/oneTBB/blob/master/WASM_Support.md#limitations
+void initTBB() {
+#if (MANIFOLD_PAR == 1)
+  int num_threads = tbb::this_task_arena::max_concurrency();
+  std::atomic<int> barrier{num_threads};
+  tbb::parallel_for(
+      0, num_threads,
+      [&barrier](int) {
+        barrier--;
+        while (barrier > 0) {
+          // Send browser thread to event loop
+          std::this_thread::yield();
+        }
+      },
+      tbb::static_partitioner{});
+#endif
+}
 
 using namespace emscripten;
 using namespace manifold;
 
 EMSCRIPTEN_BINDINGS(whatever) {
-  value_object<glm::vec2>("vec2")
-      .field("x", &glm::vec2::x)
-      .field("y", &glm::vec2::y);
+  value_object<vec2>("vec2").field("x", &vec2::x).field("y", &vec2::y);
 
-  value_object<glm::ivec3>("ivec3")
-      .field("0", &glm::ivec3::x)
-      .field("1", &glm::ivec3::y)
-      .field("2", &glm::ivec3::z);
+  value_object<ivec3>("ivec3")
+      .field("0", &ivec3::x)
+      .field("1", &ivec3::y)
+      .field("2", &ivec3::z);
 
-  value_object<glm::vec3>("vec3")
-      .field("x", &glm::vec3::x)
-      .field("y", &glm::vec3::y)
-      .field("z", &glm::vec3::z);
+  value_object<vec3>("vec3")
+      .field("x", &vec3::x)
+      .field("y", &vec3::y)
+      .field("z", &vec3::z);
 
-  value_object<glm::vec4>("vec4")
-      .field("x", &glm::vec4::x)
-      .field("y", &glm::vec4::y)
-      .field("z", &glm::vec4::z)
-      .field("w", &glm::vec4::w);
+  value_object<vec4>("vec4")
+      .field("x", &vec4::x)
+      .field("y", &vec4::y)
+      .field("z", &vec4::z)
+      .field("w", &vec4::w);
 
   enum_<Manifold::Error>("status")
       .value("NoError", Manifold::Error::NoError)
@@ -81,19 +102,15 @@ EMSCRIPTEN_BINDINGS(whatever) {
       .field("halfedge", &Smoothness::halfedge)
       .field("smoothness", &Smoothness::smoothness);
 
-  value_object<Properties>("properties")
-      .field("surfaceArea", &Properties::surfaceArea)
-      .field("volume", &Properties::volume);
-
-  register_vector<glm::ivec3>("Vector_ivec3");
-  register_vector<glm::vec3>("Vector_vec3");
-  register_vector<glm::vec2>("Vector_vec2");
-  register_vector<std::vector<glm::vec2>>("Vector2_vec2");
-  register_vector<float>("Vector_f32");
+  register_vector<ivec3>("Vector_ivec3");
+  register_vector<vec3>("Vector_vec3");
+  register_vector<vec2>("Vector_vec2");
+  register_vector<std::vector<vec2>>("Vector2_vec2");
+  register_vector<double>("Vector_f64");
   register_vector<CrossSection>("Vector_crossSection");
   register_vector<Manifold>("Vector_manifold");
   register_vector<Smoothness>("Vector_smoothness");
-  register_vector<glm::vec4>("Vector_vec4");
+  register_vector<vec4>("Vector_vec4");
 
   class_<CrossSection>("CrossSection")
       .constructor(&cross_js::OfPolygons)
@@ -126,9 +143,9 @@ EMSCRIPTEN_BINDINGS(whatever) {
   function("_crossSectionDifferenceN", &cross_js::DifferenceN);
   function("_crossSectionIntersectionN", &cross_js::IntersectionN);
   function("_crossSectionCollectVertices", &cross_js::CollectVertices);
-  function("_crossSectionHullPoints",
-           select_overload<CrossSection(std::vector<glm::vec2>)>(
-               &CrossSection::Hull));
+  function(
+      "_crossSectionHullPoints",
+      select_overload<CrossSection(std::vector<vec2>)>(&CrossSection::Hull));
 
   class_<Manifold>("Manifold")
       .constructor(&man_js::FromMeshJS)
@@ -138,14 +155,15 @@ EMSCRIPTEN_BINDINGS(whatever) {
       .function("_Split", &man_js::Split)
       .function("_SplitByPlane", &man_js::SplitByPlane)
       .function("_TrimByPlane", &Manifold::TrimByPlane)
-      .function("slice", &Manifold::Slice)
-      .function("project", &Manifold::Project)
+      .function("_Slice", &Manifold::Slice)
+      .function("_Project", &Manifold::Project)
       .function("hull", select_overload<Manifold() const>(&Manifold::Hull))
       .function("_GetMeshJS", &js::GetMeshJS)
       .function("refine", &Manifold::Refine)
       .function("refineToLength", &Manifold::RefineToLength)
+      .function("refineToTolerance", &Manifold::RefineToTolerance)
       .function("smoothByNormals", &Manifold::SmoothByNormals)
-      .function("smoothOut", &Manifold::SmoothOut)
+      .function("_SmoothOut", &Manifold::SmoothOut)
       .function("_Warp", &man_js::Warp)
       .function("_SetProperties", &man_js::SetProperties)
       .function("transform", &man_js::Transform)
@@ -163,11 +181,14 @@ EMSCRIPTEN_BINDINGS(whatever) {
       .function("numProp", &Manifold::NumProp)
       .function("numPropVert", &Manifold::NumPropVert)
       .function("_boundingBox", &Manifold::BoundingBox)
-      .function("precision", &Manifold::Precision)
+      .function("tolerance", &Manifold::GetTolerance)
+      .function("setTolerance", &Manifold::SetTolerance)
       .function("genus", &Manifold::Genus)
-      .function("getProperties", &Manifold::GetProperties)
+      .function("volume", &Manifold::Volume)
+      .function("surfaceArea", &Manifold::SurfaceArea)
+      .function("minGap", &Manifold::MinGap)
       .function("calculateCurvature", &Manifold::CalculateCurvature)
-      .function("calculateNormals", &Manifold::CalculateNormals)
+      .function("_CalculateNormals", &Manifold::CalculateNormals)
       .function("originalID", &Manifold::OriginalID)
       .function("asOriginal", &Manifold::AsOriginal);
 
@@ -188,13 +209,16 @@ EMSCRIPTEN_BINDINGS(whatever) {
   function("_manifoldDifferenceN", &man_js::DifferenceN);
   function("_manifoldIntersectionN", &man_js::IntersectionN);
   function("_manifoldCollectVertices", &man_js::CollectVertices);
-  function("_manifoldHullPoints",
-           select_overload<Manifold(const std::vector<glm::vec3>&)>(
-               &Manifold::Hull));
+  function(
+      "_manifoldHullPoints",
+      select_overload<Manifold(const std::vector<vec3>&)>(&Manifold::Hull));
 
   // Quality Globals
   function("setMinCircularAngle", &Quality::SetMinCircularAngle);
   function("setMinCircularEdgeLength", &Quality::SetMinCircularEdgeLength);
   function("setCircularSegments", &Quality::SetCircularSegments);
   function("getCircularSegments", &Quality::GetCircularSegments);
+  function("resetToCircularDefaults", &Quality::ResetToDefaults);
+
+  function("initTBB", &initTBB);
 }

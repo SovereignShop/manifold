@@ -1,31 +1,50 @@
-project(manifoldc)
+# Copyright 2024 The Manifold Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# this is a shared library for FFI bindings
-add_library(${PROJECT_NAME} SHARED manifoldc.cpp conv.cpp)
-
-if(MSVC)
-    set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
-        ${CMAKE_BINARY_DIR}/bin )
-    set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-        ${CMAKE_BINARY_DIR}/bin )
-endif()
-
-if(MANIFOLD_EXPORT)
-    target_link_libraries(${PROJECT_NAME} PRIVATE meshIO)
-    target_compile_options(${PROJECT_NAME} PUBLIC -DMANIFOLD_EXPORT)
-endif()
-
-target_link_libraries(
-    ${PROJECT_NAME}
-    PRIVATE manifold sdf cross_section
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-    $<INSTALL_INTERFACE:include>
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
-target_compile_options(${PROJECT_NAME} PRIVATE ${MANIFOLD_FLAGS})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+add_library(
+  manifoldc
+  manifoldc.cpp
+  conv.cpp
+  box.cpp
+  cross.cpp
+  rect.cpp
+)
+exportlib(manifoldc)
 
-install(TARGETS ${PROJECT_NAME} EXPORT manifoldTargets)
-install(FILES include/manifoldc.h include/types.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+if(MANIFOLD_EXPORT)
+  target_sources(manifoldc PRIVATE meshIOc.cpp)
+  target_compile_options(manifoldc PUBLIC -DMANIFOLD_EXPORT)
+endif()
+
+target_link_libraries(manifoldc PRIVATE manifold)
+
+target_include_directories(
+  manifoldc
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+target_compile_options(manifoldc PRIVATE ${MANIFOLD_FLAGS})
+
+install(TARGETS manifoldc EXPORT manifoldTargets)
+install(
+  FILES include/manifold/manifoldc.h include/manifold/types.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/manifold
+)

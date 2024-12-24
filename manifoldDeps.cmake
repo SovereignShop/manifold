@@ -1,6 +1,8 @@
 include(FetchContent)
 include(GNUInstallDirs)
 find_package(PkgConfig)
+
+message(STATUS "WTF")
 if(MANIFOLD_PAR STREQUAL "TBB")
     find_package(TBB)
 endif()
@@ -37,6 +39,7 @@ else()
     endif()
 endif()
 
+message(STATUS "Fetching TextToPolygon")
 FetchContent_Declare(
   TextToPolygon
   GIT_REPOSITORY https://github.com/SovereignShop/text-to-polygon.git

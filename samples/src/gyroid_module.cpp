@@ -12,23 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "manifold.h"
+#include "manifold/manifold.h"
 #include "samples.h"
-#include "sdf.h"
 
 namespace {
 using namespace manifold;
 
 struct Gyroid {
-  float operator()(glm::vec3 p) const {
-    p -= glm::pi<float>() / 4;
+  double operator()(vec3 p) const {
+    p -= kPi / 4;
     return cos(p.x) * sin(p.y) + cos(p.y) * sin(p.z) + cos(p.z) * sin(p.x);
   }
 };
 
-Manifold RhombicDodecahedron(float size) {
-  Manifold box =
-      Manifold::Cube(size * glm::sqrt(2.0f) * glm::vec3(1, 1, 2), true);
+Manifold RhombicDodecahedron(double size) {
+  Manifold box = Manifold::Cube(size * la::sqrt(2.0) * vec3(1, 1, 2), true);
   Manifold result = box.Rotate(90, 45) ^ box.Rotate(90, 45, 90);
   return result ^ box.Rotate(0, 0, 45);
 }
@@ -43,17 +41,21 @@ namespace manifold {
  * 3D-printable, as it is oriented with minimal overhangs. This sample
  * demonstrates the use of a Signed Distance Function (SDF) to create smooth,
  * complex manifolds.
+ *
+ * @param size Creates a module scaled to this dimension between opposite faces.
+ * @param n The number of divisions for SDF evaluation across the gyroid's
+ * period.
  */
-Manifold GyroidModule(float size, int n) {
-  auto gyroid = [&](float level) {
-    const float period = glm::two_pi<float>();
-    return Manifold(LevelSet(Gyroid(), {glm::vec3(-period), glm::vec3(period)},
-                             period / n, level))
-        .Scale(glm::vec3(size / period));
+Manifold GyroidModule(double size, int n) {
+  auto gyroid = [&](double level) {
+    const double period = kTwoPi;
+    return Manifold::LevelSet(Gyroid(), {vec3(-period), vec3(period)},
+                              period / n, level)
+        .Scale(vec3(size / period));
   };
 
   Manifold result = (RhombicDodecahedron(size) ^ gyroid(-0.4)) - gyroid(0.4);
 
-  return result.Rotate(-45, 0, 90).Translate({0, 0, size / glm::sqrt(2.0f)});
+  return result.Rotate(-45, 0, 90).Translate({0, 0, size / la::sqrt(2.0)});
 }
 }  // namespace manifold

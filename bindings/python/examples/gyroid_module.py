@@ -16,7 +16,7 @@
 
 import math
 import numpy as np
-from manifold3d import Mesh, Manifold
+from manifold3d import Manifold
 
 
 def gyroid(x, y, z):
@@ -31,13 +31,11 @@ def gyroid(x, y, z):
 
 
 def gyroid_levelset(level, period, size, n):
-    return Manifold(
-        Mesh.level_set(
-            gyroid,
-            [-period, -period, -period, period, period, period],
-            period / n,
-            level,
-        )
+    return Manifold.level_set(
+        gyroid,
+        [-period, -period, -period, period, period, period],
+        period / n,
+        level,
     ).scale([size / period] * 3)
 
 

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/** @type {import("../../manifold-encapsulated-types")["Manifold"]} */
+const Manifold = globalThis.Manifold;
+
 export const examples = {
   functions: {
     Intro: function() {
@@ -45,6 +48,34 @@ export const examples = {
       // keep them better organized in the GLB. This will also allow you to
       // specify material properties, and even vertex colors via
       // setProperties(). See Tetrahedron Puzzle example.
+      return result;
+    },
+
+    Auger: function() {
+      const outerRadius = 20;
+      const beadRadius = 2;
+      const height = 40;
+      const twist = 90;
+
+      const {revolve, sphere, union, extrude} = Manifold;
+      const {circle} = CrossSection;
+      setMinCircularEdgeLength(0.1);
+
+      const bead1 =
+          revolve(circle(beadRadius).translate([outerRadius, 0]), 50, 90)
+              .add(sphere(beadRadius).translate([outerRadius, 0, 0]))
+              .translate([0, -outerRadius, 0]);
+
+      const beads = [];
+      for (let i = 0; i < 3; i++) {
+        beads.push(bead1.rotate(0, 0, 120 * i));
+      }
+      const bead = union(beads);
+
+      const auger = extrude(bead.slice(0), height, 50, twist);
+
+      const result =
+          auger.add(bead).add(bead.translate(0, 0, height).rotate(0, 0, twist));
       return result;
     },
 
@@ -128,7 +159,7 @@ export const examples = {
       // Demonstrates how at 90-degree intersections, the sphere and cylinder
       // facets match up perfectly, for any choice of global resolution
       // parameters.
-      const {sphere, cylinder, union} = Manifold;
+      const {sphere, cylinder, union, cube} = Manifold;
 
       function roundedFrame(edgeLength, radius, circularSegments = 0) {
         const edge = cylinder(edgeLength, radius, -1, circularSegments);
@@ -152,6 +183,17 @@ export const examples = {
       setMinCircularAngle(3);
       setMinCircularEdgeLength(0.5);
       const result = roundedFrame(100, 10);
+      // Demonstrate how you can use the .split method to perform
+      // a subtraction and an intersection at once
+      const [inside, outside] = result.split(cube(100, true));
+
+      const outsideNode = new GLTFNode();
+      outsideNode.manifold = outside;
+
+      const insideNode = new GLTFNode();
+      insideNode.manifold = inside;
+      insideNode.material = {baseColorFactor: [0, 1, 1]};
+
       return result;
     },
 
@@ -221,7 +263,7 @@ export const examples = {
       const radius = 30;
       const offset = 20;
       const wiggles = 12;
-      const sharpness = 0.6;
+      const sharpness = 0.8;
       const n = 50;
 
       const positions = [];
@@ -536,7 +578,7 @@ export const examples = {
         0, 0, size / Math.sqrt(2)
       ]);
       return result;
-    }
+    },
   },
 
   functionBodies: new Map()

@@ -12,76 +12,61 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(manifold_test)
+if(NOT MANIFOLD_TEST)
+  return()
+endif()
 
-set(CMAKE_CXX_STANDARD 17)
 enable_testing()
 
-set(SOURCE_FILES polygon_test.cpp cross_section_test.cpp manifold_test.cpp boolean_test.cpp sdf_test.cpp samples_test.cpp test_main.cpp)
-
-if(MANIFOLD_CBIND AND NOT EMSCRIPTEN)
-  list(APPEND SOURCE_FILES manifoldc_test.cpp)
-endif()
-
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-# Prevent installation of GTest with your project
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-set(INSTALL_GMOCK OFF CACHE BOOL "" FORCE)
-
-include(FetchContent)
-FetchContent_Declare(googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.14.0
-  GIT_SHALLOW    TRUE
-  GIT_PROGRESS   TRUE
-  FIND_PACKAGE_ARGS NAMES GTest gtest
+# put fast/simple tests files first to run earlier
+set(
+  SOURCE_FILES
+  test_main.cpp
+  polygon_test.cpp
+  properties_test.cpp
+  manifold_test.cpp
+  boolean_test.cpp
+  sdf_test.cpp
+  smooth_test.cpp
+  hull_test.cpp
+  samples_test.cpp
+  boolean_complex_test.cpp
+  $<$<BOOL:${MANIFOLD_CROSS_SECTION}>:cross_section_test.cpp>
+  $<$<BOOL:${MANIFOLD_CBIND}>:manifoldc_test.cpp>
 )
-FetchContent_MakeAvailable(googletest)
 
-if(NOT TARGET GTest::gtest_main)
-    add_library(GTest::gtest_main ALIAS gtest_main)
-endif()
-
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} polygon GTest::gtest_main manifold sdf samples cross_section)
-
-if(MANIFOLD_FUZZ)
-  FetchContent_Declare(fuzztest
-    GIT_REPOSITORY https://github.com/google/fuzztest.git
-    # note that if commit hash is used, it cannot be a shallow clone
-    GIT_TAG        2606e04a43e5a7730e437a849604a61f1cb0ff28
-    GIT_PROGRESS   TRUE
-  )
-  FetchContent_MakeAvailable(fuzztest)
-  fuzztest_setup_fuzzing_flags()
-  add_executable(polygon_fuzz polygon_fuzz.cpp)
-  target_link_libraries(polygon_fuzz PUBLIC polygon)
-  link_fuzztest(polygon_fuzz)
-  gtest_discover_tests(polygon_fuzz)
-endif()
-
-if(MANIFOLD_CBIND AND NOT EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} manifoldc)
-endif()
-
-if(MANIFOLD_EXPORT)
-  target_link_libraries(${PROJECT_NAME} meshIO)
-  target_compile_options(${PROJECT_NAME} PUBLIC -DMANIFOLD_EXPORT)
-endif()
-
-target_compile_options(${PROJECT_NAME} PRIVATE ${MANIFOLD_FLAGS})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
-
-add_test(test_all ${PROJECT_NAME})
+add_executable(manifold_test ${SOURCE_FILES})
+target_link_libraries(
+  manifold_test
+  PRIVATE
+    GTest::gtest_main
+    manifold
+    samples
+    $<$<BOOL:${MANIFOLD_CBIND}>:manifoldc>
+    $<$<BOOL:${MANIFOLD_PAR}>:TBB::tbb>
+)
 
 if(EMSCRIPTEN)
-  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS
-    "-s ASSERTIONS=1 -s DEMANGLE_SUPPORT=1 --bind")
+  target_link_options(
+    manifold_test
+    PRIVATE
+      -sASSERTIONS=1
+      -sDEMANGLE_SUPPORT=1
+      --bind
+      --preload-file
+      ${CMAKE_CURRENT_SOURCE_DIR}/polygons@/polygons
+  )
 endif()
 
-if(MSVC)
-    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
-        ${CMAKE_BINARY_DIR}/bin )
-    set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-        ${CMAKE_BINARY_DIR}/bin )
+target_compile_options(manifold_test PRIVATE ${MANIFOLD_FLAGS})
+exportbin(manifold_test)
+
+add_test(test_all manifold_test)
+
+if(MANIFOLD_FUZZ)
+  fuzztest_setup_fuzzing_flags()
+  add_executable(polygon_fuzz polygon_fuzz.cpp)
+  target_link_libraries(polygon_fuzz PUBLIC manifold)
+  link_fuzztest(polygon_fuzz)
+  gtest_discover_tests(polygon_fuzz)
 endif()
