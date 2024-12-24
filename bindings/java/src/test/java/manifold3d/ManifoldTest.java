@@ -2,8 +2,8 @@ package manifold3d;
 
 import org.junit.Test;
 import manifold3d.Manifold;
-import manifold3d.linalg.DoubleMat4x3;
-import manifold3d.linalg.DoubleMat4x3Vector;
+import manifold3d.linalg.DoubleMat3x4;
+import manifold3d.linalg.DoubleMat3x4Vector;
 import manifold3d.pub.DoubleMesh;
 import manifold3d.linalg.DoubleVec3;
 import manifold3d.linalg.DoubleVec2;
@@ -49,14 +49,14 @@ public class ManifoldTest {
         MeshIO.ExportMesh("hull.glb", hullMesh, opts);
         assert hull.getProperties().volume() > 0.0;
 
-        DoubleMat4x3 frame1 = new DoubleMat4x3(1).translate(new DoubleVec3(20, 0, 0));
-        DoubleMat4x3 frame2 = new DoubleMat4x3(1)
+        DoubleMat3x4 frame1 = new DoubleMat3x4(1).translate(new DoubleVec3(20, 0, 0));
+        DoubleMat3x4 frame2 = new DoubleMat3x4(1)
                 .rotate(new DoubleVec3(0, -3.14, 0))
                 .translate(new DoubleVec3(20, 0, 0));
         CrossSection section1 = CrossSection.Square(new DoubleVec2(20, 20), true);
         CrossSection section2 = CrossSection.Circle(15, 20);
         Manifold loft = MeshUtils.Loft(new CrossSectionVector(section1, section2),
-                                       new DoubleMat4x3Vector(frame1, frame2),
+                                       new DoubleMat3x4Vector(frame1, frame2),
                                        MeshUtils.LoftAlgorithm.EagerNearestNeighbor);
 
         assert loft.getProperties().volume() > 0.0;

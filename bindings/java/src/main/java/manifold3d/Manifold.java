@@ -24,7 +24,7 @@ import manifold3d.pub.SmoothnessVector;
 import manifold3d.pub.OpType;
 
 import manifold3d.linalg.DoubleVec3Vector;
-import manifold3d.linalg.DoubleMat4x3;
+import manifold3d.linalg.DoubleMat3x4;
 import manifold3d.linalg.DoubleVec2;
 import manifold3d.linalg.DoubleVec3;
 import manifold3d.linalg.IntegerVec3;
@@ -78,14 +78,15 @@ public class Manifold extends Pointer {
 
     public native @ByRef @Name("operator=") Manifold put(@ByRef Manifold other);
 
-    public Manifold(@ByRef MeshGL mesh, @ByRef FloatVector propertyTolerance) { allocate(mesh, propertyTolerance); }
-    private native void allocate(@ByRef MeshGL mesh, @ByRef FloatVector propertyTolerance);
+    public Manifold(@ByRef MeshGL mesh) { allocate(mesh); }
+    private native void allocate(@ByRef MeshGL mesh);
 
     // Methods
     public MeshGL getMesh() {
-        return getMeshGL(new IntegerVec3(0, 1, 2));
+        return getMeshGL(-1);
     }
-    @Name("GetMeshGL") public native @ByVal MeshGL getMeshGL(@ByRef IntegerVec3 normalIdx);
+    @Name("GetMeshGL") public native @ByVal MeshGL getMeshGL(int normalIdx);
+    @Name("GetMeshGL") public native @ByVal MeshGL getMeshGL();
     @Name("IsEmpty") public native boolean isEmpty();
     @Name("Status") public native @Cast("manifold::Manifold::Error") int status();
     @Name("NumVert") public native int numVert();
@@ -94,7 +95,7 @@ public class Manifold extends Pointer {
     @Name("NumProp") public native int numProp();
     @Name("NumPropVert") public native int numPropVert();
     @Name("BoundingBox") public native @ByVal Box boundingBox();
-    @Name("Precision") public native float precision();
+    //@Name("Precision") public native float precision();
     @Name("Genus") public native int genus();
     @Name("CalculateCurvature") public native @ByVal Manifold calculateCurvature(int gaussianIdx, int meanIdx);
     @Name("OriginalID") public native int originalID();
@@ -129,7 +130,7 @@ public class Manifold extends Pointer {
     }
 
     @Name("Rotate") public native @ByVal Manifold rotate(float xDegrees, float yDegrees, float zDegrees);
-    @Name("Transform") public native @ByVal Manifold transform(@ByRef DoubleMat4x3 transform);
+    @Name("Transform") public native @ByVal Manifold transform(@ByRef DoubleMat3x4 transform);
     @Name("Mirror") public native @ByVal Manifold mirror(@ByRef DoubleVec3 mirrorAxis);
     @Name("Refine") public native @ByVal Manifold refine(int refineValue);
 

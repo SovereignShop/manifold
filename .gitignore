@@ -133,3 +133,4 @@ CMakeSettings.json
 [._]s[a-v][a-z]
 [._]sw[a-p]
 
+bindings/java/target

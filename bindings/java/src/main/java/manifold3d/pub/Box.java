@@ -1,7 +1,7 @@
 package manifold3d.pub;
 
 import manifold3d.linalg.DoubleVec3;
-import manifold3d.linalg.DoubleMat4x3;
+import manifold3d.linalg.DoubleMat3x4;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
@@ -25,7 +25,7 @@ public class Box extends Pointer {
     public native boolean Contains(@ByRef Box box);
     public native void Union(@ByRef DoubleVec3 p);
     public native @ByVal Box Union(@ByRef Box box);
-    public native @ByVal Box Transform(@ByRef DoubleMat4x3 transform);
+    public native @ByVal Box Transform(@ByRef DoubleMat3x4 transform);
 
     @Name("operator+")
     public native @ByVal Box add(@ByRef DoubleVec3 shift);

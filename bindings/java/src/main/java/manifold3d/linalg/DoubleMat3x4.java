@@ -12,8 +12,8 @@ import java.util.NoSuchElementException;
 
 @Platform(compiler = "cpp17", include = "linalg.h")
 @Namespace("linalg")
-@Name("mat<double, 4, 3>")
-public class DoubleMat4x3 extends DoublePointer implements Iterable<DoubleVec3> {
+@Name("mat<double, 3, 4>")
+public class DoubleMat3x4 extends DoublePointer implements Iterable<DoubleVec3> {
     static { Loader.load(); }
 
     @Override
@@ -37,20 +37,20 @@ public class DoubleMat4x3 extends DoublePointer implements Iterable<DoubleVec3> 
         };
     }
 
-    public DoubleMat4x3() { allocate(); }
+    public DoubleMat3x4() { allocate(); }
     private native void allocate();
 
     private native void allocate(double x);
-    public DoubleMat4x3(double x) { allocate(x); }
+    public DoubleMat3x4(double x) { allocate(x); }
 
-    public DoubleMat4x3(@ByRef DoubleVec3 col1, @ByRef DoubleVec3 col2,
+    public DoubleMat3x4(@ByRef DoubleVec3 col1, @ByRef DoubleVec3 col2,
                         @ByRef DoubleVec3 col3, @ByRef DoubleVec3 col4) {
         allocate(col1, col2, col3, col4);
     }
     public native void allocate(@ByRef DoubleVec3 col1, @ByRef DoubleVec3 col2,
                                 @ByRef DoubleVec3 col3, @ByRef DoubleVec3 col4);
 
-    public DoubleMat4x3(double c0, double c1, double c2, double c3,
+    public DoubleMat3x4(double c0, double c1, double c2, double c3,
                   double c4, double c5, double c6, double c7,
                   double c8, double c9, double c10, double c11) {
         allocate(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11);
@@ -61,24 +61,24 @@ public class DoubleMat4x3 extends DoublePointer implements Iterable<DoubleVec3> 
 
     @Name("operator[]") public native @ByRef DoubleVec3 getColumn(int i);
 
-    public native @Name("operator=") @ByRef DoubleMat4x3 put(@ByRef DoubleMat4x3 rhs);
+    public native @Name("operator=") @ByRef DoubleMat3x4 put(@ByRef DoubleMat3x4 rhs);
 
-    public DoubleMat4x3 transform(@ByRef DoubleMat4x3 other) {
+    public DoubleMat3x4 transform(@ByRef DoubleMat3x4 other) {
         return MatrixTransforms.Transform(this, other);
     }
 
-    public DoubleMat4x3 rotate(@ByRef DoubleVec3 angles) {
+    public DoubleMat3x4 rotate(@ByRef DoubleVec3 angles) {
         return MatrixTransforms.Rotate(this, angles);
     }
 
-    public DoubleMat4x3 rotate(@ByRef DoubleVec3 axis, float angle) {
+    public DoubleMat3x4 rotate(@ByRef DoubleVec3 axis, float angle) {
         return MatrixTransforms.Rotate(this, axis, angle);
     }
 
-    public DoubleMat4x3 translate(@ByRef DoubleVec3 vec) {
+    public DoubleMat3x4 translate(@ByRef DoubleVec3 vec) {
         return MatrixTransforms.Translate(this, vec);
     }
-    public DoubleMat4x3 translate(double x, double y, double z) {
+    public DoubleMat3x4 translate(double x, double y, double z) {
         return MatrixTransforms.Translate(this, new DoubleVec3(x, y, z));
     }
 }

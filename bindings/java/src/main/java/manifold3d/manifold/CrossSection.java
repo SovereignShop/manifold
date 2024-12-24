@@ -5,7 +5,7 @@ import org.bytedeco.javacpp.annotation.*;
 
 import manifold3d.LibraryPaths;
 import manifold3d.linalg.DoubleVec2;
-import manifold3d.linalg.DoubleMat3x2;
+import manifold3d.linalg.DoubleMat2x3;
 import manifold3d.manifold.Rect;
 import manifold3d.manifold.CrossSectionVector;
 
@@ -71,7 +71,7 @@ public class CrossSection extends Pointer {
     @Name("Rotate") public native @ByVal CrossSection rotate(float degrees);
     @Name("Scale") public native @ByVal CrossSection scale(@ByVal DoubleVec2 s);
     @Name("Mirror") public native @ByVal CrossSection mirror(@ByVal DoubleVec2 ax);
-    @Name("Transform") public native @ByVal CrossSection transform(@ByVal DoubleMat3x2 m);
+    @Name("Transform") public native @ByVal CrossSection transform(@ByVal DoubleMat2x3 m);
     @Name("Simplify") public native @ByVal CrossSection simplify(double epsilon);
 
     @Name("Offset") public native @ByVal CrossSection offset(double delta, @Cast("manifold::CrossSection::JoinType") int joinType, double miterLimit, int arcTolerance);

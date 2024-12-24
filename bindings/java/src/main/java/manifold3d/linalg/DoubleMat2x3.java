@@ -11,8 +11,8 @@ import java.util.NoSuchElementException;
 
 @Platform(compiler = "cpp17", include = "linalg.h")
 @Namespace("linalg")
-@Name("mat<double, 3, 2>")
-public class DoubleMat3x2 extends DoublePointer implements Iterable<DoubleVec2> {
+@Name("mat<double, 2, 3>")
+public class DoubleMat2x3 extends DoublePointer implements Iterable<DoubleVec2> {
     static { Loader.load(); }
 
     @Override
@@ -36,18 +36,18 @@ public class DoubleMat3x2 extends DoublePointer implements Iterable<DoubleVec2> 
         };
     }
 
-    public DoubleMat3x2() { allocate(); }
+    public DoubleMat2x3() { allocate(); }
     private native void allocate();
 
-    public DoubleMat3x2(double x) { allocate(x); }
+    public DoubleMat2x3(double x) { allocate(x); }
     private native void allocate(double x);
 
-    public DoubleMat3x2(@ByRef DoubleVec2 col1, @ByRef DoubleVec2 col2, @ByRef DoubleVec2 col3) {
+    public DoubleMat2x3(@ByRef DoubleVec2 col1, @ByRef DoubleVec2 col2, @ByRef DoubleVec2 col3) {
         allocate(col1, col2, col3);
     }
     public native void allocate(@ByRef DoubleVec2 col1, @ByRef DoubleVec2 col2, @ByRef DoubleVec2 col3);
 
-    public DoubleMat3x2(double c0, double c1, double c2,
+    public DoubleMat2x3(double c0, double c1, double c2,
                         double c3, double c4, double c5) {
         allocate(c0, c1, c2, c3, c4, c5);
     }
@@ -55,5 +55,5 @@ public class DoubleMat3x2 extends DoublePointer implements Iterable<DoubleVec2> 
 
     @Name("operator[]") public native @ByRef DoubleVec2 getColumn(int i);
 
-    public native @Name("operator=") @ByRef DoubleMat3x2 put(@ByRef DoubleMat3x2 rhs);
+    public native @Name("operator=") @ByRef DoubleMat2x3 put(@ByRef DoubleMat2x3 rhs);
 }
