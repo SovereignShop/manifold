@@ -18,7 +18,6 @@ manifold3d/linalg/DoubleMat2x3$1.class
 manifold3d/manifold/CrossSection.class
 manifold3d/pub/Smoothness.class
 manifold3d/pub/ExecutionParams.class
-manifold3d/pub/DoubleMesh.class
 manifold3d/UIntVector.class
 manifold3d/ManifoldPair.class
 manifold3d/linalg/DoubleMat3x4.class

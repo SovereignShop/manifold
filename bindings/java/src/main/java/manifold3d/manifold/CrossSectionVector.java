@@ -12,7 +12,7 @@ import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
 @Platform(compiler = "cpp17",
-          include = {"manifold/manifold.h", "<vector>"},
+          include = {"manifold/manifold.h", "manifold/cross_section.h", "<vector>"},
           linkpath = { LibraryPaths.MANIFOLD_LIB_DIR },
           link = { "manifold" })
 @Name("std::vector<manifold::CrossSection>")

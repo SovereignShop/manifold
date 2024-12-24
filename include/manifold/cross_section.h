@@ -128,7 +128,7 @@ class CrossSection {
   /** @name Text
    *
    * */
-  CrossSection Text(const std::string& fontFile, const std::string& text, u_int32_t pixelHeight, int interpRes, FillRule fillRule);
+  static CrossSection Text(const std::string& fontFile, const std::string& text, u_int32_t pixelHeight, int interpRes, FillRule fillRule);
 
   /** @name Transformation
    */

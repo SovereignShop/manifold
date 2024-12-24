@@ -13,7 +13,7 @@ import manifold3d.pub.SimplePolygon;
 import manifold3d.pub.Polygons;
 
 @Platform(compiler = "cpp17",
-          include = { "cross_section.h" },
+          include = { "manifold/cross_section.h" },
           linkpath = { LibraryPaths.MANIFOLD_LIB_DIR },
           link = { "manifold" })
 @Namespace("manifold")
@@ -98,7 +98,7 @@ public class CrossSection extends Pointer {
     public static native @ByVal CrossSection Compose(@ByRef CrossSectionVector crossSection);
     @Name("Decompose") public native @ByVal CrossSectionVector decompose();
 
-    public static native @ByVal CrossSection Text(@ByRef @StdString String fontFile, @ByRef @StdString String text, int pixelHeight, int interpRes, @Cast("manifold::CrossSection::FillRule") int fillRule);
+    public static native @ByVal CrossSection Text(@ByRef @StdString String fontFile, @ByRef @StdString String text, int pixelHeight, @Cast("u_int32_t") int interpRes, @Cast("manifold::CrossSection::FillRule") int fillRule);
     public static native @ByVal CrossSection Circle(float radius, int circularSegments);
     public static native @ByVal CrossSection Square(@ByRef DoubleVec2 size, boolean center);
     public static CrossSection Square(double x, double y, boolean center) {

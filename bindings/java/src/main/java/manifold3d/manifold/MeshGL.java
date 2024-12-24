@@ -45,9 +45,6 @@ public class MeshGL extends Pointer {
     public native @ByRef FloatVector halfedgeTangent();
     public native MeshGL halfedgeTangent(@ByRef FloatVector halfedgeTangent);
 
-    public native float precision();
-    public native MeshGL precision(float precision);
-
     // MeshGL constructor and other methods
     public native boolean Merge();
 }
