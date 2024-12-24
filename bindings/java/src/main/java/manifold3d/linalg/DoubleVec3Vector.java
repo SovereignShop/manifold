@@ -1,4 +1,4 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
 import java.nio.DoubleBuffer;
 import java.nio.ByteBuffer;
@@ -8,7 +8,7 @@ import java.nio.DoubleBuffer;
 import java.util.Arrays;
 
 import manifold3d.BufferUtils;
-import manifold3d.glm.DoubleVec3;
+import manifold3d.linalg.DoubleVec3;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
@@ -16,8 +16,8 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = {"<vector>", "glm/glm.hpp"})
-@Name("std::vector<glm::vec3>")
+@Platform(compiler = "cpp17", include = {"<vector>", "linalg.h"})
+@Name("std::vector<linalg::vec<double, 3>>")
 public class DoubleVec3Vector extends Pointer implements Iterable<DoubleVec3> {
     static { Loader.load(); }
 

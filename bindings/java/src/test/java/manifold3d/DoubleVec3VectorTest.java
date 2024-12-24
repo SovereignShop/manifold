@@ -2,8 +2,8 @@ package manifold3d;
 
 import org.junit.Test;
 import org.junit.Assert;
-import manifold3d.glm.DoubleVec3;
-import manifold3d.glm.DoubleVec3Vector;
+import manifold3d.linalg.DoubleVec3;
+import manifold3d.linalg.DoubleVec3Vector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

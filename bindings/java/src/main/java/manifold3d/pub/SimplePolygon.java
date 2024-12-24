@@ -6,7 +6,7 @@ import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 
 import manifold3d.BufferUtils;
-import manifold3d.glm.DoubleVec2;
+import manifold3d.linalg.DoubleVec2;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = {"manifold.h"})
+@Platform(compiler = "cpp17", include = {"manifold/manifold.h"})
 @Namespace("manifold")
 @Name("SimplePolygon")
 public class SimplePolygon extends Pointer implements Iterable<DoubleVec2> {

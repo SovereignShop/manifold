@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = "manifold.h")
+@Platform(compiler = "cpp17", include = "manifold/manifold.h")
 @Name("std::vector<manifold::Polygons>")
 public class PolygonsVector extends Pointer implements Iterable<Polygons> {
     static { Loader.load(); }

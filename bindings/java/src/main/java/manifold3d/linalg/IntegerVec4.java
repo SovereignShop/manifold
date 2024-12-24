@@ -1,11 +1,11 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = "glm/glm.hpp")
-@Namespace("glm")
-@Name("ivec4")
+@Platform(compiler = "cpp17", include = "linalg.h")
+@Namespace("linalg")
+@Name("vec<int, 4>")
 public class IntegerVec4 extends IntPointer {
     static { Loader.load(); }
 
@@ -18,10 +18,18 @@ public class IntegerVec4 extends IntPointer {
     @Name("operator[]")
     public native int get(int i);
 
-    public native @MemberGetter int x();
-    public native @MemberGetter int y();
-    public native @MemberGetter int z();
-    public native @MemberGetter int w();
+    public int x() {
+        return get(0);
+    }
+    public int y() {
+        return get(1);
+    }
+    public int z() {
+        return get(2);
+    }
+    public int w() {
+        return get(3);
+    }
 
     public native @Name("operator=") @ByRef IntegerVec4 put(@ByRef IntegerVec4 rhs);
 }

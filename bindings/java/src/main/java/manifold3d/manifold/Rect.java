@@ -4,11 +4,11 @@ import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
 import manifold3d.LibraryPaths;
-import manifold3d.glm.DoubleVec2;
-import manifold3d.glm.DoubleMat3x2;
+import manifold3d.linalg.DoubleVec2;
+import manifold3d.linalg.DoubleMat3x2;
 import manifold3d.manifold.CrossSection;
 
-@Platform(compiler = "cpp17", include = { "public.h" }, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = { "manifold" })
+@Platform(compiler = "cpp17", include = { "common.h" }, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR }, link = { "manifold" })
 @Namespace("manifold")
 public class Rect extends Pointer {
     static { Loader.load(); }

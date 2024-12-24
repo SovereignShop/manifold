@@ -4,8 +4,8 @@ import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
 import manifold3d.LibraryPaths;
-import manifold3d.glm.DoubleVec2;
-import manifold3d.glm.DoubleMat3x2;
+import manifold3d.linalg.DoubleVec2;
+import manifold3d.linalg.DoubleMat3x2;
 import manifold3d.manifold.Rect;
 import manifold3d.manifold.CrossSectionVector;
 
@@ -14,10 +14,8 @@ import manifold3d.pub.Polygons;
 
 @Platform(compiler = "cpp17",
           include = { "cross_section.h" },
-          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR,
-                       LibraryPaths.FREETYPE_LIB_DIR,
-                       LibraryPaths.TEXT_TO_POLYGON_LIB_DIR },
-          link = { "manifold", "TextToPolygon", "freetype" })
+          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR },
+          link = { "manifold" })
 @Namespace("manifold")
 public class CrossSection extends Pointer {
     static { Loader.load(); }

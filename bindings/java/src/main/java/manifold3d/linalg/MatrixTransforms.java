@@ -1,9 +1,9 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
-import manifold3d.glm.DoubleMat4x3;
-import manifold3d.glm.DoubleMat3x2;
-import manifold3d.glm.DoubleVec3;
-import manifold3d.glm.DoubleVec2;
+import manifold3d.linalg.DoubleMat4x3;
+import manifold3d.linalg.DoubleMat3x2;
+import manifold3d.linalg.DoubleVec3;
+import manifold3d.linalg.DoubleVec2;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;

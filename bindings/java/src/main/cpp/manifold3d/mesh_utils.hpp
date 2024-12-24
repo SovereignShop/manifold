@@ -2,20 +2,26 @@
 
 #include <algorithm>
 #include <stdexcept>
-#include <glm/glm.hpp>
 #include <vector>
-#include "polygon.h"
-#include "manifold.h"
-#include "cross_section.h"
+#include "manifold/linalg.h"
+#include "manifold/polygon.h"
+#include "manifold/manifold.h"
+#include "manifold/cross_section.h"
 #include "happly.h"
 #include "buffer_utils.hpp"
 #include "matrix_transforms.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
 namespace MeshUtils {
 
-
-//#include <glm/vec3.hpp>     // Include GLM for vector operations
+using vec2   = linalg::vec<double, 2>;
+using vec3   = linalg::vec<double, 3>;
+using vec4   = linalg::vec<double, 4>;
+using ivec3  = linalg::vec<int, 3>;
+using mat2x2 = linalg::mat<double, 2, 2>;
+using mat3x3 = linalg::mat<double, 3, 3>;
+using mat4x3 = linalg::mat<double, 4, 3>;
 
 manifold::Manifold CreateSurface(const float* vertProperties, int numProps, int width, int height, float pixelWidth = 1.0) {
     // Create the MeshGL structure
@@ -269,7 +275,7 @@ manifold::Manifold PlyToSurface(const std::string &filepath, double cellSize, do
     return CreateSurface(vertProperties.data(), nProp, grid_resolution_x, grid_resolution_y, cellSize);
 }
 
-manifold::Manifold ColorVertices(const manifold::Manifold& man, const glm::vec4 color, size_t propIndex = 3) {
+manifold::Manifold ColorVertices(const manifold::Manifold& man, const vec4 color, size_t propIndex = 3) {
     manifold::MeshGL mesh = man.GetMeshGL();
     const std::vector<float>& vertProps = mesh.vertProperties;
     int numProps = mesh.numProp;
@@ -346,34 +352,34 @@ manifold::Manifold LoadImage(const std::string& texturePath, const float depth, 
     return CreateSurface(propertyMap.data(), numProps, width, height, pixelWidth);
 }
 
-std::vector<glm::ivec3> TriangulateFaces(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces, float precision) {
-    std::vector<glm::ivec3> result;
+std::vector<ivec3> TriangulateFaces(const std::vector<vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces, float precision) {
+    std::vector<ivec3> result;
     for (const auto& face : faces) {
         // If the face only has 3 vertices, no need to triangulate, just add it to result
         if (face.size() == 3) {
-            result.push_back(glm::ivec3(face[0], face[1], face[2]));
+            result.push_back(ivec3(face[0], face[1], face[2]));
             continue;
         }
 
         // Compute face normal
-        glm::vec3 normal = glm::cross(vertices[face[1]] - vertices[face[0]], vertices[face[2]] - vertices[face[0]]);
-        normal = glm::normalize(normal);
+        vec3 normal = linalg::cross(vertices[face[1]] - vertices[face[0]], vertices[face[2]] - vertices[face[0]]);
+        normal = linalg::normalize(normal);
 
         // Compute reference right vector
-        glm::vec3 right = glm::normalize(vertices[face[1]] - vertices[face[0]]);
+        vec3 right = linalg::normalize(vertices[face[1]] - vertices[face[0]]);
 
         // Compute up vector
-        glm::vec3 up = glm::cross(right, normal);
+        vec3 up = linalg::cross(right, normal);
 
         // Project vertices onto plane
-        std::vector<glm::vec2> face2D;
+        std::vector<vec2> face2D;
         for (const auto& index : face) {
-            glm::vec3 local = vertices[index] - vertices[face[0]];
-            face2D.push_back(glm::vec2(glm::dot(local, right), glm::dot(local, up)));
+            vec3 local = vertices[index] - vertices[face[0]];
+            face2D.push_back(vec2(linalg::dot(local, right), linalg::dot(local, up)));
         }
 
         // Triangulate and remap the triangulated vertices back to the original indices
-        std::vector<glm::ivec3> triVerts = manifold::Triangulate({face2D}, precision);
+        std::vector<ivec3> triVerts = manifold::Triangulate({face2D}, precision);
         for (auto& tri : triVerts) {
             tri.x = face[tri.x];
             tri.y = face[tri.y];
@@ -386,7 +392,7 @@ std::vector<glm::ivec3> TriangulateFaces(const std::vector<glm::vec3>& vertices,
     return result;
 }
 
-manifold::Manifold Polyhedron(const std::vector<glm::vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces) {
+manifold::Manifold Polyhedron(const std::vector<vec3>& vertices, const std::vector<std::vector<uint32_t>>& faces) {
     manifold::Mesh mesh;
     mesh.triVerts = TriangulateFaces(vertices, faces, -1.0);
     mesh.vertPos = vertices;
@@ -396,7 +402,7 @@ manifold::Manifold Polyhedron(const std::vector<glm::vec3>& vertices, const std:
 
 manifold::Manifold Polyhedron(double* vertices, std::size_t nVertices, int* faceBuf, int* faceLengths, std::size_t nFaces) {
 
-    std::vector<glm::vec3> verts = BufferUtils::createDoubleVec3Vector(vertices, nVertices*3);
+    std::vector<vec3> verts = BufferUtils::createDoubleVec3Vector(vertices, nVertices*3);
 
     std::vector<std::vector<uint32_t>> faces;
     for (std::size_t faceIdx = 0, faceBufIndex = 0; faceIdx < nFaces; faceIdx++) {
@@ -417,7 +423,7 @@ enum class LoftAlgorithm: long {
    Isomorphic
 };
 
-glm::vec2 calculatePolygonCentroid(const std::vector<glm::vec2>& vertices) {
+vec2 calculatePolygonCentroid(const std::vector<vec2>& vertices) {
     if (vertices.size() < 3) {
         throw std::invalid_argument("A polygon must have at least 3 vertices.");
     }
@@ -456,10 +462,10 @@ glm::vec2 calculatePolygonCentroid(const std::vector<glm::vec2>& vertices) {
     centroidX /= (6.0 * signedArea);
     centroidY /= (6.0 * signedArea);
 
-    return glm::vec2(centroidX, centroidY);
+    return vec2(centroidX, centroidY);
 }
 
-manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons>& sections, const std::vector<mat4x3>& transforms) {
     if (sections.size() != transforms.size()) {
       throw std::runtime_error("Mismatched number of sections and transforms");
     }
@@ -479,16 +485,16 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
         sectionSizes.push_back(sectionSize);
     }
 
-    std::vector<glm::vec3> vertPos;
+    std::vector<vec3> vertPos;
     vertPos.reserve(nVerts);
-    std::vector<glm::ivec3> triVerts;
+    std::vector<ivec3> triVerts;
     triVerts.reserve(2*nVerts);
 
     size_t botSectionOffset = 0;
     for (std::size_t i = 0; i < sections.size() - 1; ++i) {
         const manifold::Polygons& botPolygons = sections[i];
         const manifold::Polygons& topPolygons = sections[i + 1];
-        const glm::mat4x3& botTransform = transforms[i];
+        const mat4x3& botTransform = transforms[i];
 
         if (botPolygons.size() != topPolygons.size()) {
           throw std::runtime_error("Cross sections must be composed of euqal number of polygons.");
@@ -505,19 +511,19 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
           auto botPolygon = *currPolyIt;
           auto topPolygon = *nextPolyIt;
 
-          glm::vec2 botCentroid = calculatePolygonCentroid(botPolygon);
-          glm::vec2 topCentroid = calculatePolygonCentroid(topPolygon);
-          glm::vec2 centroidOffset = topCentroid - botCentroid;
+          vec2 botCentroid = calculatePolygonCentroid(botPolygon);
+          vec2 topCentroid = calculatePolygonCentroid(topPolygon);
+          vec2 centroidOffset = topCentroid - botCentroid;
 
           for (const auto& vertex : botPolygon) {
-              vertPos.push_back(MatrixTransforms::Translate(botTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+              vertPos.push_back(MatrixTransforms::Translate(botTransform, vec3(vertex.x, vertex.y, 0))[3]);
           }
 
           float minDistance = std::numeric_limits<float>::max();
           size_t botStartVertOffset = 0,
             topStartVertOffset = 0;
           for (size_t j = 0; j < topPolygon.size(); ++j) {
-            float dist = glm::distance(botPolygon[0], topPolygon[j] - centroidOffset);
+            float dist = linalg::distance(botPolygon[0], topPolygon[j] - centroidOffset);
             if (dist < minDistance) {
               minDistance = dist;
               topStartVertOffset = j;
@@ -532,9 +538,9 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
               size_t botNextVertOffset = (botVertOffset + 1) % botPolygon.size();
               size_t topNextVertOffset = (topVertOffset + 1) % topPolygon.size();
 
-              float distBotNextToTop = glm::distance(botPolygon[botNextVertOffset], topPolygon[topVertOffset] - centroidOffset);
-              float distBotToTopNext = glm::distance(botPolygon[botVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
-              float distBotNextToTopNext = glm::distance(botPolygon[botNextVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
+              float distBotNextToTop = linalg::distance(botPolygon[botNextVertOffset], topPolygon[topVertOffset] - centroidOffset);
+              float distBotToTopNext = linalg::distance(botPolygon[botVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
+              float distBotNextToTopNext = linalg::distance(botPolygon[botNextVertOffset], topPolygon[topNextVertOffset] - centroidOffset);
 
               bool botHasNext = botNextVertOffset != (botStartVertOffset + 1) % botPolygon.size() || !botHasMoved;
               bool topHasNext = topNextVertOffset != (topStartVertOffset + 1) % topPolygon.size() || !topHasMoved;
@@ -581,7 +587,7 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
     auto backTransform = transforms.back();
     for (const auto& poly: backPolygons) {
       for (const auto& vertex : poly) {
-        vertPos.push_back(MatrixTransforms::Translate(backTransform, glm::vec3(vertex.x, vertex.y, 0))[3]);
+        vertPos.push_back(MatrixTransforms::Translate(backTransform, vec3(vertex.x, vertex.y, 0))[3]);
       }
     }
     auto backTriangles = manifold::Triangulate(backPolygons, -1.0);
@@ -600,9 +606,9 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
     return man;
 }
 
-manifold::Manifold IsomorphicLoft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
-    std::vector<glm::vec3> vertPos;
-    std::vector<glm::ivec3> triVerts;
+manifold::Manifold IsomorphicLoft(const std::vector<manifold::Polygons>& sections, const std::vector<mat4x3>& transforms) {
+    std::vector<vec3> vertPos;
+    std::vector<ivec3> triVerts;
 
     if (sections.size() != transforms.size()) {
         throw std::runtime_error("Mismatched number of sections and transforms");
@@ -613,11 +619,11 @@ manifold::Manifold IsomorphicLoft(const std::vector<manifold::Polygons>& section
 
     for (std::size_t i = 0; i < sections.size(); ++i) {
         const manifold::Polygons polygons = sections[i];
-        glm::mat4x3 transform = transforms[i];
+        mat4x3 transform = transforms[i];
 
         for (const auto& polygon : polygons) {
-            for (const glm::vec2& vertex : polygon) {
-                glm::vec3 translatedVertex = MatrixTransforms::Translate(transform, glm::vec3(vertex.x, vertex.y, 0))[3];
+            for (const vec2& vertex : polygon) {
+                vec3 translatedVertex = MatrixTransforms::Translate(transform, vec3(vertex.x, vertex.y, 0))[3];
                 vertPos.push_back(translatedVertex);
             }
         }
@@ -638,8 +644,8 @@ manifold::Manifold IsomorphicLoft(const std::vector<manifold::Polygons>& section
                 for (std::size_t k = 0; k < polygon.size(); ++k) {
                     std::size_t nextIndex = (k + 1) % polygon.size();
 
-                    glm::ivec3 triangle1(currentOffset + k, currentOffset + nextIndex, nextOffset + k);
-                    glm::ivec3 triangle2(currentOffset + nextIndex, nextOffset + nextIndex, nextOffset + k);
+                    ivec3 triangle1(currentOffset + k, currentOffset + nextIndex, nextOffset + k);
+                    ivec3 triangle2(currentOffset + nextIndex, nextOffset + nextIndex, nextOffset + k);
 
                     triVerts.push_back(triangle1);
                     triVerts.push_back(triangle2);
@@ -673,7 +679,7 @@ manifold::Manifold IsomorphicLoft(const std::vector<manifold::Polygons>& section
     return manifold::Manifold(mesh);
 }
 
-manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
+manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const std::vector<mat4x3>& transforms, LoftAlgorithm algorithm) {
     switch (algorithm) {
         case LoftAlgorithm::EagerNearestNeighbor:
             return EagerNearestNeighborLoft(sections, transforms);
@@ -684,11 +690,11 @@ manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const s
     }
 }
 
-manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const std::vector<manifold::Polygons>& sections, const std::vector<mat4x3>& transforms) {
     return EagerNearestNeighborLoft(sections, transforms);
 }
 
-manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<mat4x3>& transforms) {
     std::vector<manifold::Polygons> polys;
     for (auto& section : sections) {
         polys.push_back({section});
@@ -696,7 +702,7 @@ manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<gl
     return Loft(polys, transforms);
 }
 
-manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
+manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<mat4x3>& transforms, LoftAlgorithm algorithm) {
     std::vector<manifold::Polygons> polys;
     for (auto& section : sections) {
         polys.push_back({section});
@@ -704,7 +710,7 @@ manifold::Manifold Loft(const manifold::Polygons& sections, const std::vector<gl
     return Loft(polys, transforms, algorithm);
 }
 
-manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vector<mat4x3>& transforms) {
     std::vector<manifold::Polygons> polys;
     for (std::size_t i = 0; i < transforms.size(); i++) {
         polys.push_back({section});
@@ -712,7 +718,7 @@ manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vecto
     return Loft(polys, transforms);
 }
 
-manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
+manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vector<mat4x3>& transforms, LoftAlgorithm algorithm) {
     std::vector<manifold::Polygons> polys;
     for (std::size_t i = 0; i < transforms.size(); i++) {
         polys.push_back({section});
@@ -720,7 +726,7 @@ manifold::Manifold Loft(const manifold::SimplePolygon& section, const std::vecto
     return Loft(polys, transforms, algorithm);
 }
 
-manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<mat4x3>& transforms) {
     std::vector<manifold::Polygons> polys;
     for (auto section : sections) {
         polys.push_back(section.ToPolygons());
@@ -728,7 +734,7 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
     return Loft(polys, transforms);
 }
 
-manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
+manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, const std::vector<mat4x3>& transforms, LoftAlgorithm algorithm) {
     std::vector<manifold::Polygons> polys;
     for (auto section : sections) {
         polys.push_back(section.ToPolygons());
@@ -736,7 +742,7 @@ manifold::Manifold Loft(const std::vector<manifold::CrossSection>& sections, con
     return Loft(polys, transforms, algorithm);
 }
 
-manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<glm::mat4x3>& transforms) {
+manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<mat4x3>& transforms) {
     std::vector<manifold::Polygons> sections(transforms.size());
     auto polys = section.ToPolygons();
     for (std::size_t i = 0; i < transforms.size(); i++) {
@@ -745,7 +751,7 @@ manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<
     return Loft(sections, transforms);
 }
 
-manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<glm::mat4x3>& transforms, LoftAlgorithm algorithm) {
+manifold::Manifold Loft(const manifold::CrossSection section, const std::vector<mat4x3>& transforms, LoftAlgorithm algorithm) {
     std::vector<manifold::Polygons> sections(transforms.size());
     auto polys = section.ToPolygons();
     for (std::size_t i = 0; i < transforms.size(); i++) {

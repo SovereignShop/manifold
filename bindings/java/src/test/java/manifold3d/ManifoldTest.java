@@ -2,12 +2,12 @@ package manifold3d;
 
 import org.junit.Test;
 import manifold3d.Manifold;
-import manifold3d.glm.DoubleMat4x3;
-import manifold3d.glm.DoubleMat4x3Vector;
+import manifold3d.linalg.DoubleMat4x3;
+import manifold3d.linalg.DoubleMat4x3Vector;
 import manifold3d.pub.DoubleMesh;
-import manifold3d.glm.DoubleVec3;
-import manifold3d.glm.DoubleVec2;
-import manifold3d.glm.DoubleVec3Vector;
+import manifold3d.linalg.DoubleVec3;
+import manifold3d.linalg.DoubleVec2;
+import manifold3d.linalg.DoubleVec3Vector;
 import manifold3d.MeshUtils;
 import manifold3d.manifold.MeshIO;
 import manifold3d.manifold.CrossSectionVector;

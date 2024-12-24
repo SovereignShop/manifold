@@ -4,7 +4,7 @@ import manifold3d.pub.Smoothness;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = {"<vector>", "public.h"})
+@Platform(compiler = "cpp17", include = {"<vector>", "manifold/manifold.h"})
 @Name("std::vector<manifold::Smoothness>")
 public class SmoothnessVector extends Pointer {
     static { Loader.load(); }

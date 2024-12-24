@@ -1,11 +1,11 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = "glm/glm.hpp")
-@Namespace("glm")
-@Name("vec4")
+@Platform(compiler = "cpp17", include = "linalg.h")
+@Namespace("linalg")
+@Name("vec<double, 4>")
 public class DoubleVec4 extends DoublePointer {
     static { Loader.load(); }
 
@@ -18,10 +18,20 @@ public class DoubleVec4 extends DoublePointer {
     @Name("operator[]")
     public native double get(int i);
 
-    public native @MemberGetter double x();
-    public native @MemberGetter double y();
-    public native @MemberGetter double z();
-    public native @MemberGetter double w();
+    public double x() {
+        return get(0);
+    }
+    public double y() {
+        return get(1);
+    }
+
+    public double z() {
+        return get(2);
+    }
+
+    public double w() {
+        return get(3);
+    }
 
     public native @Name("operator=") @ByRef DoubleVec4 put(@ByRef DoubleVec4 rhs);
 }

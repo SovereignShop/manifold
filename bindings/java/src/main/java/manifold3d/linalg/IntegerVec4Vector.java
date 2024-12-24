@@ -1,11 +1,11 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
 import manifold3d.BufferUtils;
-import manifold3d.glm.IntegerVec4;
+import manifold3d.linalg.IntegerVec4;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
@@ -13,8 +13,8 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = {"<vector>", "glm/glm.hpp"})
-@Name("std::vector<glm::ivec4>")
+@Platform(compiler = "cpp17", include = {"<vector>", "linalg.h"})
+@Name("std::vector<linalg::vec<int, 4>>")
 public class IntegerVec4Vector extends Pointer implements Iterable<IntegerVec4> {
     static { Loader.load(); }
 

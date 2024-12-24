@@ -49,35 +49,7 @@
                 <directory>../../build/bin</directory>
             </resource>
             <resource>
-                <directory>../../build/meshIO</directory>
-                <includes>
-                    <include>libmeshIO.so</include>
-                    <include>libmeshIO.dylib</include>
-                    <include>meshIO.dll</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/meshIO/Release</directory>
-                <includes>
-                    <include>meshIO.dll</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/_deps/texttopolygon-build/</directory>
-                <includes>
-                    <include>libTextToPolygon.so</include>
-                    <include>libTextToPolygon.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/_deps/freetype2-build/</directory>
-                <includes>
-                    <include>libfreetype.so</include>
-                    <include>libfreetype.6.16.0.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/manifold</directory>
+                <directory>../../build/src/</directory>
                 <includes>
                     <include>libmanifold.so</include>
                     <include>libmanifold.2.4.5.dylib</include>
@@ -89,25 +61,6 @@
                     <include>manifold.dll</include>
                 </includes>
             </resource>
-            <resource>
-                <directory>../../build/_deps/clipper2-build/</directory>
-                <includes>
-                    <include>libClipper2.so</include>
-                    <include>libClipper2.1.3.0.dylib</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/third_party/clipper2/CPP/Release</directory>
-                <includes>
-                    <include>Clipper2.dll</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>../../build/src/third_party/glm/glm/Release</directory>
-                <includes>
-                    <include>glm_shared.dll</include>
-                </includes>
-            </resource>
         </resources>
         <plugins>
 
@@ -117,19 +70,15 @@
                 <version>1.5.9</version>
                 <configuration>
                     <classPath>${project.build.outputDirectory}</classPath>
-                    <libraryPath>${project.build.directory}/../../../build/src/manifold/</libraryPath>
+                    <libraryPath>${project.build.directory}/../../../build/src/</libraryPath>
                     <includePaths>
                         <includePath>${project.build.sourceDirectory}</includePath>
                         <includePath>src/main/cpp/manifold3d/</includePath>
-                        <includePath>../../src/cross_section/include/</includePath>
+                        <includePath>../../include/</includePath>
                         <includePath>../../src/third_party/clipper2/CPP/Clipper2Lib/include/</includePath>
-                        <includePath>../../build/_deps/glm-src/</includePath>
                         <includePath>../../build/_deps/texttopolygon-src/include</includePath>
                         <includePath>../../build/_deps/freetype2-src/include</includePath>
-                        <includePath>../../src/polygon/include</includePath>
-                        <includePath>../../src/manifold/include/</includePath>
-                        <includePath>../../src/utilities/include/</includePath>
-                        <includePath>../../meshIO/include/</includePath>
+                        <includePath>../../src/</includePath>
                     </includePaths>
                     <preload>libmanifold.so</preload>
                     <copyLibs>false</copyLibs>
@@ -152,11 +101,11 @@
                                 <classOrPackageName>manifold3d.*</classOrPackageName>
                                 <classOrPackageName>manifold3d.manifold.*</classOrPackageName>
                                 <classOrPackageName>manifold3d.pub.*</classOrPackageName>
-                                <classOrPackageName>manifold3d.glm.*</classOrPackageName>
+                                <classOrPackageName>manifold3d.linalg.*</classOrPackageName>
                             </classOrPackageNames>
 
 
-                    <compilerProperties>                                <java.library.path>${project.build.directory}/../../../build/src/manifold/</java.library.path>
+                    <compilerProperties>                                <java.library.path>${project.build.directory}/../../../build/src/</java.library.path>
 
                     </compilerProperties>
                         </configuration>

@@ -1,6 +1,6 @@
-package manifold3d.glm;
+package manifold3d.linalg;
 
-import manifold3d.glm.DoubleVec2;
+import manifold3d.linalg.DoubleVec2;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
@@ -9,9 +9,9 @@ import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = "glm/glm.hpp")
-@Namespace("glm")
-@Name("mat3x2")
+@Platform(compiler = "cpp17", include = "linalg.h")
+@Namespace("linalg")
+@Name("mat<double, 3, 2>")
 public class DoubleMat3x2 extends DoublePointer implements Iterable<DoubleVec2> {
     static { Loader.load(); }
 

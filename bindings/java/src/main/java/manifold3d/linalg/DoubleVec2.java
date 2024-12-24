@@ -9,8 +9,8 @@ import java.util.NoSuchElementException;
 
 @Platform(compiler = "cpp17", include = "linalg.h")
 @Namespace("linalg")
-@Name("vec<double, 3>")
-public class Vec3 extends DoublePointer implements Iterable<Double> {
+@Name("vec<double, 2>")
+public class DoubleVec2 extends DoublePointer implements Iterable<Double> {
     static { Loader.load(); }
 
     @Override
@@ -21,7 +21,7 @@ public class Vec3 extends DoublePointer implements Iterable<Double> {
 
             @Override
             public boolean hasNext() {
-                return index < 3;
+                return index < 2;
             }
 
             @Override
@@ -34,11 +34,11 @@ public class Vec3 extends DoublePointer implements Iterable<Double> {
         };
     }
 
-    public Vec3() { allocate(); }
+    public DoubleVec2() { allocate(); }
     private native void allocate();
 
-    public Vec3(double x, double y, double z) { allocate(x, y, z); }
-    private native void allocate(double x, double y, double z);
+    public DoubleVec2(double x, double y) { allocate(x, y); }
+    private native void allocate(double x, double y);
 
     @Name("operator []")
     public native double get(int i);
@@ -49,9 +49,6 @@ public class Vec3 extends DoublePointer implements Iterable<Double> {
     public double y() {
         return get(1);
     }
-    public double z() {
-        return get(2);
-    }
 
-    public native @Name("operator=") @ByRef Vec3 put(@ByRef Vec3 rhs);
+    public native @Name("operator=") @ByRef DoubleVec2 put(@ByRef DoubleVec2 rhs);
 }

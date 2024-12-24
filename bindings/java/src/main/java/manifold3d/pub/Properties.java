@@ -3,7 +3,7 @@ package manifold3d.pub;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = "public.h")
+@Platform(compiler = "cpp17", include = "manifold/manifold.h")
 @Namespace("manifold")
 public class Properties extends Pointer {
     static { Loader.load(); }

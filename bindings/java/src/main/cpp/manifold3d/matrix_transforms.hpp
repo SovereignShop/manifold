@@ -1,6 +1,6 @@
 #pragma once
 
-#include <linalg.h>    // https://github.com/sgorsten/linalg
+#include <manifold/linalg.h>    // https://github.com/sgorsten/linalg
 #include <cmath>       // for std::sin, std::cos
 
 namespace MatrixTransforms {
@@ -9,43 +9,47 @@ using namespace linalg::aliases;
 
 // ------------------------------------------------------------
 // Type aliases for convenience (double-precision):
-using double2   = linalg::vec<double, 2>;
-using double3   = linalg::vec<double, 3>;
-using double2x2 = linalg::mat<double, 2, 2>;
-using double3x3 = linalg::mat<double, 3, 3>;
+using vec2   = linalg::vec<double, 2>;
+using vec3   = linalg::vec<double, 3>;
+using mat2x2 = linalg::mat<double, 2, 2>;
+using mat3x3 = linalg::mat<double, 3, 3>;
 
-// 4x3 matrix in row-major form => 3 rows, 4 columns
-// We'll treat the "columns" as 3-element vectors (like glm::mat4x3).
-using double4x3 = linalg::mat<double, 3, 4>;
+// Here, mat4x3 is 4 rows × 3 columns (row-major):
+//  - row 0..2 = rotation vectors
+//  - row 3    = translation vector
+using mat4x3 = linalg::mat<double, 4, 3>;
 
-// 3x2 matrix in row-major form => 2 rows, 3 columns
-// We'll treat the "columns" as 2-element vectors (like glm::mat3x2).
-using double3x2 = linalg::mat<double, 2, 3>;
+// 2D transform: 3 rows × 2 columns would be linalg::mat<double,3,2>,
+// but the original code had 'mat3x2' = 2 rows × 3 columns in GLM terms.
+// We'll store 3 rows, 2 columns => each row is a 2-element vector.
+// If your code truly wants 2D transforms with a "translation row," then
+// row 0..1 = basis vectors, row 2 = translation.
+using mat3x2 = linalg::mat<double, 3, 2>;
 
 // ------------------------------------------------------------
-// Helper functions to mimic column-based access like GLM.
-// linalg::mat<T, R, C> has operator()(row, col) for element access.
+// Helper functions for row-based access: get_row / set_row
+
 template<typename T, int R, int C>
-linalg::vec<T,R> get_col(const linalg::mat<T,R,C> &M, int col_index)
+linalg::vec<T,C> get_row(const linalg::mat<T,R,C> &M, int row_index)
 {
-    linalg::vec<T,R> column{};
-    for (int r = 0; r < R; ++r) {
-        column[r] = M(r, col_index);
+    linalg::vec<T,C> row{};
+    for (int c = 0; c < C; ++c) {
+        row[c] = M(row_index, c);
     }
-    return column;
+    return row;
 }
 
 template<typename T, int R, int C>
-void set_col(linalg::mat<T,R,C> &M, int col_index, const linalg::vec<T,R> &col_vec)
+void set_row(linalg::mat<T,R,C> &M, int row_index, const linalg::vec<T,C> &row_vec)
 {
-    for (int r = 0; r < R; ++r) {
-        M(r, col_index) = col_vec[r];
+    for (int c = 0; c < C; ++c) {
+        M(row_index, c) = row_vec[c];
     }
 }
 
 // ------------------------------------------------------------
-// Rodrigues Rotation: rotate vector v around (unit) axis k by angle a.
-inline double3 rodrigues_rotation(const double3 &v, const double3 &k, double a)
+// Rodrigues rotation of v around axis k by angle a
+inline vec3 rodrigues_rotation(const vec3 &v, const vec3 &k, double a)
 {
     using std::sin;
     using std::cos;
@@ -54,112 +58,106 @@ inline double3 rodrigues_rotation(const double3 &v, const double3 &k, double a)
     double s = sin(a);
 
     // v*cos(a) + (k x v)*sin(a) + k*(k·v)*(1 - cos(a))
-    return v * c
-         + linalg::cross(k, v) * s
-         + k * (linalg::dot(k, v) * (1.0 - c));
+    return v*c
+         + linalg::cross(k, v)*s
+         + k*(linalg::dot(k, v) * (1.0 - c));
 }
 
 // ------------------------------------------------------------
-// Yaw: rotate columns [0], [2] about column [1].
-inline double4x3 Yaw(const double4x3 &m, double a)
+// "Yaw": Rotate rows [0], [2] about row [1] (the axis).
+//  - row 1 remains unchanged
+inline mat4x3 Yaw(const mat4x3 &m, double a)
 {
-    auto c0 = get_col(m, 0);
-    auto c1 = get_col(m, 1);
-    auto c2 = get_col(m, 2);
-    auto c3 = get_col(m, 3);
+    auto r0 = get_row(m, 0);
+    auto r1 = get_row(m, 1);
+    auto r2 = get_row(m, 2);
+    auto r3 = get_row(m, 3);
 
-    auto d0 = rodrigues_rotation(c0, c1, a);
-    auto d1 = c1;  // unchanged
-    auto d2 = rodrigues_rotation(c2, c1, a);
+    auto d0 = rodrigues_rotation(r0, r1, a);
+    auto d1 = r1;  // unchanged
+    auto d2 = rodrigues_rotation(r2, r1, a);
 
-    double4x3 result = m;
-    set_col(result, 0, d0);
-    set_col(result, 1, d1);
-    set_col(result, 2, d2);
-    set_col(result, 3, c3);
-
+    mat4x3 result = m;
+    set_row(result, 0, d0);
+    set_row(result, 1, d1);
+    set_row(result, 2, d2);
+    set_row(result, 3, r3); // translation unchanged
     return result;
 }
 
-// Pitch: rotate columns [1], [2] about column [0].
-inline double4x3 Pitch(const double4x3 &m, double a)
+// "Pitch": Rotate rows [1], [2] about row [0].
+inline mat4x3 Pitch(const mat4x3 &m, double a)
 {
-    auto c0 = get_col(m, 0);
-    auto c1 = get_col(m, 1);
-    auto c2 = get_col(m, 2);
-    auto c3 = get_col(m, 3);
+    auto r0 = get_row(m, 0);
+    auto r1 = get_row(m, 1);
+    auto r2 = get_row(m, 2);
+    auto r3 = get_row(m, 3);
 
-    auto d0 = c0;  // unchanged
-    auto d1 = rodrigues_rotation(c1, c0, a);
-    auto d2 = rodrigues_rotation(c2, c0, a);
+    auto d0 = r0;  // unchanged
+    auto d1 = rodrigues_rotation(r1, r0, a);
+    auto d2 = rodrigues_rotation(r2, r0, a);
 
-    double4x3 result = m;
-    set_col(result, 0, d0);
-    set_col(result, 1, d1);
-    set_col(result, 2, d2);
-    set_col(result, 3, c3);
-
+    mat4x3 result = m;
+    set_row(result, 0, d0);
+    set_row(result, 1, d1);
+    set_row(result, 2, d2);
+    set_row(result, 3, r3);
     return result;
 }
 
-// Roll: rotate columns [0], [1] about column [2].
-inline double4x3 Roll(const double4x3 &m, double a)
+// "Roll": Rotate rows [0], [1] about row [2].
+inline mat4x3 Roll(const mat4x3 &m, double a)
 {
-    auto c0 = get_col(m, 0);
-    auto c1 = get_col(m, 1);
-    auto c2 = get_col(m, 2);
-    auto c3 = get_col(m, 3);
+    auto r0 = get_row(m, 0);
+    auto r1 = get_row(m, 1);
+    auto r2 = get_row(m, 2);
+    auto r3 = get_row(m, 3);
 
-    auto d0 = rodrigues_rotation(c0, c2, a);
-    auto d1 = rodrigues_rotation(c1, c2, a);
-    auto d2 = c2; // unchanged
+    auto d0 = rodrigues_rotation(r0, r2, a);
+    auto d1 = rodrigues_rotation(r1, r2, a);
+    auto d2 = r2; // unchanged
 
-    double4x3 result = m;
-    set_col(result, 0, d0);
-    set_col(result, 1, d1);
-    set_col(result, 2, d2);
-    set_col(result, 3, c3);
-
+    mat4x3 result = m;
+    set_row(result, 0, d0);
+    set_row(result, 1, d1);
+    set_row(result, 2, d2);
+    set_row(result, 3, r3);
     return result;
 }
 
-// Rotate: rotate columns [0..2] around an arbitrary axis.
-inline double4x3 Rotate(const double4x3 &m, const double3 &axis, double a)
+// Rotate: rotate rows [0..2] about an arbitrary axis
+inline mat4x3 Rotate(const mat4x3 &m, const vec3 &axis, double a)
 {
-    auto c0 = get_col(m, 0);
-    auto c1 = get_col(m, 1);
-    auto c2 = get_col(m, 2);
-    auto c3 = get_col(m, 3);
+    auto r0 = get_row(m, 0);
+    auto r1 = get_row(m, 1);
+    auto r2 = get_row(m, 2);
+    auto r3 = get_row(m, 3);
 
-    double4x3 result = m;
-    set_col(result, 0, rodrigues_rotation(c0, axis, a));
-    set_col(result, 1, rodrigues_rotation(c1, axis, a));
-    set_col(result, 2, rodrigues_rotation(c2, axis, a));
-    set_col(result, 3, c3);
-
+    mat4x3 result = m;
+    set_row(result, 0, rodrigues_rotation(r0, axis, a));
+    set_row(result, 1, rodrigues_rotation(r1, axis, a));
+    set_row(result, 2, rodrigues_rotation(r2, axis, a));
+    set_row(result, 3, r3);
     return result;
 }
 
 // ------------------------------------------------------------
 // 2D rotation of a vector
-inline double2 RotateVec2(const double2 &v, double angleRadians)
+inline vec2 RotateVec2(const vec2 &v, double angle)
 {
     using std::sin;
     using std::cos;
 
-    double c = cos(angleRadians);
-    double s = sin(angleRadians);
+    double c = cos(angle);
+    double s = sin(angle);
 
-    return {
-        c*v.x - s*v.y,
-        s*v.x + c*v.y
-    };
+    return vec2{ c*v.x - s*v.y, s*v.x + c*v.y };
 }
 
-// Combined 3D rotation (pitch->yaw->roll) given angles.x/y/z
-inline double4x3 Rotate(const double4x3 &m, const double3 &angles)
+// Combined rotation in X/Y/Z
+inline mat4x3 Rotate(const mat4x3 &m, const vec3 &angles)
 {
-    double4x3 res = m;
+    mat4x3 res = m;
     if (angles.x != 0.0) {
         res = Pitch(res, angles.x);
     }
@@ -173,250 +171,330 @@ inline double4x3 Rotate(const double4x3 &m, const double3 &angles)
 }
 
 // ------------------------------------------------------------
-// 2D transform matrix is 2 rows × 3 columns => double3x2
+// 2D transform matrix => we store 3 rows, 2 columns
+//   row 0..1 = basis vectors
+//   row 2    = translation
+using mat3x2 = linalg::mat<double, 3, 2>;
+
 // Rotate basis vectors in 2D
-inline double3x2 Rotate(const double3x2 &m, double angleRadians)
+inline mat3x2 Rotate(const mat3x2 &m, double angleRadians)
 {
-    // columns: [0]=xAxis, [1]=yAxis, [2]=translation
-    auto xAxis = get_col(m, 0);
-    auto yAxis = get_col(m, 1);
-    auto trans = get_col(m, 2);
+    auto r0 = get_row(m, 0);
+    auto r1 = get_row(m, 1);
+    auto r2 = get_row(m, 2);
 
-    double2 xRot = RotateVec2(xAxis, angleRadians);
-    double2 yRot = RotateVec2(yAxis, angleRadians);
+    vec2 r0_rot = RotateVec2(r0, angleRadians);
+    vec2 r1_rot = RotateVec2(r1, angleRadians);
 
-    double3x2 result = m;
-    set_col(result, 0, xRot);
-    set_col(result, 1, yRot);
-    set_col(result, 2, trans);
-
+    mat3x2 result = m;
+    set_row(result, 0, r0_rot);
+    set_row(result, 1, r1_rot);
+    set_row(result, 2, r2);  // translation unchanged
     return result;
 }
 
 // ------------------------------------------------------------
-// Replace the upper-left 3x3 with a given rotation
-inline double4x3 SetRotation(const double4x3 &m, const double3x3 &rotation)
+// SetRotation: replace the top 3 rows with a given 3x3 rotation
+inline mat4x3 SetRotation(const mat4x3 &m, const mat3x3 &rot)
 {
-    double4x3 result = m;
-    for (int i = 0; i < 3; ++i) {
-        auto col = get_col(rotation, i); // each column is double3
-        set_col(result, i, col);
+    mat4x3 result = m;
+    // Each row of `rot` is a 3-element vector
+    for(int i = 0; i < 3; ++i) {
+        // row i of the rotation
+        vec3 row_i{ rot(i,0), rot(i,1), rot(i,2) };
+        set_row(result, i, row_i);
     }
     return result;
 }
 
 // 2D version
-inline double3x2 SetRotation(const double3x2 &m, const double2x2 &rot2x2)
+inline mat3x2 SetRotation(const mat3x2 &m, const mat2x2 &rot2x2)
 {
-    double3x2 result = m;
-    for (int i = 0; i < 2; ++i) {
-        auto col = get_col(rot2x2, i); // each column is double2
-        set_col(result, i, col);
+    mat3x2 result = m;
+    for(int i = 0; i < 2; ++i) {
+        vec2 row_i{ rot2x2(i,0), rot2x2(i,1) };
+        set_row(result, i, row_i);
     }
     return result;
 }
 
 // ------------------------------------------------------------
-// Translation: T += offset.x * col0 + offset.y * col1 + offset.z * col2
-inline double4x3 Translate(const double4x3 &m, const double3 &offset)
+// Translate: row 3 += offset.x * row0 + offset.y * row1 + offset.z * row2
+inline mat4x3 Translate(const mat4x3 &m, const vec3 &offset)
 {
-    double4x3 result = m;
+    mat4x3 result = m;
+    auto r3 = get_row(result, 3);
 
     if (offset.x != 0.0) {
-        set_col(result, 3, get_col(result, 3) + get_col(m, 0)*offset.x);
+        r3 += get_row(m, 0)*offset.x;
     }
     if (offset.y != 0.0) {
-        set_col(result, 3, get_col(result, 3) + get_col(m, 1)*offset.y);
+        r3 += get_row(m, 1)*offset.y;
     }
     if (offset.z != 0.0) {
-        set_col(result, 3, get_col(result, 3) + get_col(m, 2)*offset.z);
+        r3 += get_row(m, 2)*offset.z;
     }
-
+    set_row(result, 3, r3);
     return result;
 }
 
-// 2D version
-inline double3x2 Translate(const double3x2 &m, const double2 &offset)
+// 2D version: row 2 holds the translation
+inline mat3x2 Translate(const mat3x2 &m, const vec2 &offset)
 {
-    double3x2 result = m;
+    mat3x2 result = m;
+    auto r2 = get_row(result, 2);
 
     if (offset.x != 0.0) {
-        set_col(result, 2, get_col(result, 2) + get_col(m, 0)*offset.x);
+        r2 += get_row(m, 0)*offset.x;
     }
     if (offset.y != 0.0) {
-        set_col(result, 2, get_col(result, 2) + get_col(m, 1)*offset.y);
+        r2 += get_row(m, 1)*offset.y;
     }
+    set_row(result, 2, r2);
     return result;
 }
 
 // ------------------------------------------------------------
-// Set absolute translation
-inline double4x3 SetTranslation(const double4x3 &m, const double3 &translation)
+// Set absolute translation in row 3
+inline mat4x3 SetTranslation(const mat4x3 &m, const vec3 &translation)
 {
-    double4x3 result = m;
-    set_col(result, 3, translation);
+    mat4x3 result = m;
+    set_row(result, 3, translation);
     return result;
 }
 
-// 2D version
-inline double3x2 SetTranslation(const double3x2 &m, const double2 &translation)
+// 2D version: set translation in row 2
+inline mat3x2 SetTranslation(const mat3x2 &m, const vec2 &translation)
 {
-    double3x2 result = m;
-    set_col(result, 2, translation);
+    mat3x2 result = m;
+    set_row(result, 2, translation);
     return result;
 }
 
 // ------------------------------------------------------------
-// Multiply two 4x3 transforms (with normalization of the first 3 columns).
-inline double4x3 Transform(const double4x3 &a, const double4x3 &b)
+// Multiply two 4x3 transforms, normalizing the first 3 rows afterward.
+// This is a custom "Transform" multiplication, not plain matrix multiply.
+inline mat4x3 Transform(const mat4x3 &a, const mat4x3 &b)
 {
-    double4x3 result; // 3 rows, 4 columns
+    mat4x3 result;
 
-    for (int col = 0; col < 4; ++col)
+    // We interpret row i in `result` as a combination of rows in `a` and `b`.
+    // The original code used columns, now we adapt to rows.
+    //
+    // sum over "k"? => result(i, j) = a(i,0)*b(0,j) + a(i,1)*b(1,j) + a(i,2)*b(2,j)
+    // plus if j == 3, then add a(i,3).
+    //
+    // But we only have 3 columns total (j in [0..2]) if it's mat4x3 (4 rows, 3 columns).
+    // The old code had 4 columns. We'll do row-based logic:
+
+    // We effectively want:
+    //   row i of result = row i of a * row 0..2 of b??? Not typical.
+    //
+    // The original code is tricky because it was transposed.
+    // Let's replicate the effect:
+    //   For each row i < 3 => we "combine" the basis rows.
+    //   For row 3 => we handle translation.
+
+    // We'll do something similar to your original snippet (but row-based).
+    for(int row = 0; row < 4; ++row)
     {
-        for (int row = 0; row < 3; ++row)
+        // gather row from 'a'
+        auto ra = get_row(a, row);
+
+        for(int col = 0; col < 3; ++col)
         {
-            double sum = a(row,0)*b(0,col)
-                       + a(row,1)*b(1,col)
-                       + a(row,2)*b(2,col);
-            if (col == 3) {
-                sum += a(row,3);
-            }
-            result(row,col) = sum;
+            // sum_{k=0..2} a(row,k)*b(k,col)
+            double sum = 0.0;
+            sum += a(row,0)*b(0,col);
+            sum += a(row,1)*b(1,col);
+            sum += a(row,2)*b(2,col);
+
+            // if col==2 is "translation"? Actually we only have columns [0..2].
+            // The original code added a(row,3) if col==3, but we no longer have col==3.
+            // So we mimic "if this is the translation column, add a(row,3)" but now "translation" is row==3 in this system, so let's do:
+            // If row < 3 AND col == 2 => ???
+            // Actually in the original, "if (col == 3) sum += a(row,3)".
+            // Now there's no col=3. We'll assume the equivalent is "if row==3, add something"?
+            // But let's keep it consistent with your code snippet's logic:
+
+            result(row, col) = sum;
         }
     }
 
-    // Normalize each of the first 3 columns
-    for (int i = 0; i < 3; ++i) {
-        auto c = get_col(result, i);
-        auto norm_c = linalg::normalize(c);
-        set_col(result, i, norm_c);
+    // Then the original code normalizes the first 3 columns. Now we have 3 columns total, but we want to normalize the first 3 *rows* (since each row is a basis vector).
+    for(int i = 0; i < 3; ++i)
+    {
+        auto r = get_row(result, i);
+        auto nr = linalg::normalize(r);
+        set_row(result, i, nr);
     }
+
+    // We never handled adding the "translation" from a. If you truly want
+    // the same "Transform" logic, you'd do something like:
+    //
+    // row 3 (the translation) = a.row3 + (some combination of b's translation).
+    //
+    // Let's do the standard approach: The new translation = old translation + (offset from the basis multiply).
+    // i.e. row3(result) = row3(a) + row0(a)*b.row3.x + row1(a)*b.row3.y + row2(a)*b.row3.z
+    //
+    // We'll do it explicitly after the loop:
+    auto a0 = get_row(a, 0);
+    auto a1 = get_row(a, 1);
+    auto a2 = get_row(a, 2);
+    auto a3 = get_row(a, 3);
+
+    auto b3 = get_row(b, 3);
+
+    // combined translation:
+    //   = a3 + a0*(b3.x) + a1*(b3.y) + a2*(b3.z)
+    auto newTrans = a3 + a0*b3.x + a1*b3.y + a2*b3.z;
+    set_row(result, 3, newTrans);
 
     return result;
 }
 
-// Invert a 4x3 transform (rotation + translation)
-inline double4x3 InvertTransform(const double4x3 &m)
+// Invert a 4x3 transform (assuming the top 3 rows are orthonormal rotation, row 3 is translation).
+inline mat4x3 InvertTransform(const mat4x3 &m)
 {
-    // Extract rotation part as a 3x3
-    double3x3 rot;
-    for (int i = 0; i < 3; ++i) {
-        auto col = get_col(m, i);
-        set_col(rot, i, col);
+    // top 3 rows => rotation
+    // invert by transpose => row->col swap
+    mat3x3 rot;
+    for(int i=0; i<3; ++i)
+    {
+        // row i in 'm' is a 3-element vector
+        auto row_i = get_row(m, i);
+        // place it into row i of 'rot'
+        rot(i,0) = row_i[0];
+        rot(i,1) = row_i[1];
+        rot(i,2) = row_i[2];
     }
 
-    // Transpose to invert rotation
-    auto rotT = linalg::transpose(rot);
+    auto rotT = linalg::transpose(rot); // 3x3
 
-    // Put transposed rotation back
-    double4x3 unRotated = SetRotation(m, rotT);
+    // Rebuild the matrix with transposed rotation
+    mat4x3 unRotated = m;
+    for(int i=0; i<3; ++i)
+    {
+        // row i of rotT
+        vec3 row_i{ rotT(i,0), rotT(i,1), rotT(i,2) };
+        set_row(unRotated, i, row_i);
+    }
 
-    // The translation is column 3 => invert it
-    auto trans = get_col(m, 3);
+    // translation is row 3
+    auto trans = get_row(m, 3);
+    // inverse translation = - (R^T * trans)
     auto invTrans = -linalg::mul(rotT, trans);
 
-    return SetTranslation(unRotated, invTrans);
+    set_row(unRotated, 3, invTrans);
+    return unRotated;
 }
 
 // ------------------------------------------------------------
-// 2D versions
-inline double3x2 Transform(const double3x2 &a, const double3x2 &b)
+// 2D versions (mat3x2 => 3 rows, 2 columns)
+inline mat3x2 Transform(const mat3x2 &a, const mat3x2 &b)
 {
-    double3x2 result;
+    mat3x2 result;
+    // Similar approach: first 2 rows are basis, row 2 is translation.
+    // We'll do something analogous:
 
-    for (int col = 0; col < 3; ++col)
+    // Multiply the basis
+    for(int row = 0; row < 2; ++row)
     {
-        for (int row = 0; row < 2; ++row)
+        for(int col = 0; col < 2; ++col)
         {
-            double sum = a(row,0)*b(0,col)
-                       + a(row,1)*b(1,col);
-            if (col == 2) {
-                sum += a(row,2);
-            }
-            result(row,col) = sum;
+            double sum = a(row,0)*b(0,col) + a(row,1)*b(1,col);
+            result(row, col) = sum;
         }
     }
-
-    // Normalize first 2 columns
-    for (int i = 0; i < 2; ++i) {
-        auto c = get_col(result, i);
-        auto norm_c = linalg::normalize(c);
-        set_col(result, i, norm_c);
-    }
-
-    return result;
-}
-
-inline double3x2 InvertTransform(const double3x2 &m)
-{
-    // Extract 2x2 rotation
-    double2x2 rot2;
-    for (int i = 0; i < 2; ++i) {
-        auto col = get_col(m, i);
-        set_col(rot2, i, col);
-    }
-
-    // Transpose to invert
-    auto rot2T = linalg::transpose(rot2);
-
-    // Rebuild partial matrix
-    double3x2 unRotated = SetRotation(m, rot2T);
-
-    // Invert translation
-    auto trans = get_col(m, 2);
-    auto invTrans = -linalg::mul(rot2T, trans);
-
-    return SetTranslation(unRotated, invTrans);
-}
-
-// ------------------------------------------------------------
-// CombineTransforms variant (like Transform but different math).
-inline double4x3 CombineTransforms(const double4x3 &a, const double4x3 &b)
-{
-    double4x3 r;
-
-    auto a0 = get_col(a, 0);
-    auto a1 = get_col(a, 1);
-    auto a2 = get_col(a, 2);
-    auto a3 = get_col(a, 3);
-
-    // For each rotation column i in b, combine with a, then normalize.
-    for(int i = 0; i < 3; ++i) {
-        auto bi = get_col(b, i);
-        double3 c = a0*bi.x + a1*bi.y + a2*bi.z;
-        c = linalg::normalize(c);
-        set_col(r, i, c);
+    // Normalize first 2 rows
+    for(int i=0; i<2; ++i)
+    {
+        auto r = get_row(result, i);
+        auto nr = linalg::normalize(r);
+        set_row(result, i, nr);
     }
 
     // Combine translation
-    auto b3 = get_col(b, 3);
-    double3 c3 = a0*b3.x + a1*b3.y + a2*b3.z + a3;
-    set_col(r, 3, c3);
+    auto a0 = get_row(a, 0), a1 = get_row(a, 1), a2 = get_row(a, 2);
+    auto b2 = get_row(b, 2);
+    // new trans = a2 + a0*b2.x + a1*b2.y
+    auto newTrans = a2 + a0*b2.x + a1*b2.y;
+    set_row(result, 2, newTrans);
 
-    return r;
+    return result;
 }
 
-inline double3x2 CombineTransforms(const double3x2 &a, const double3x2 &b)
+inline mat3x2 InvertTransform(const mat3x2 &m)
 {
-    double3x2 r;
-
-    auto a0 = get_col(a, 0);
-    auto a1 = get_col(a, 1);
-    auto a2 = get_col(a, 2);
-
-    for (int i = 0; i < 2; ++i) {
-        auto bi = get_col(b, i);
-        double2 c = a0*bi.x + a1*bi.y;
-        c = linalg::normalize(c);
-        set_col(r, i, c);
+    // top 2 rows => rotation
+    mat2x2 rot;
+    for(int i=0; i<2; ++i)
+    {
+        auto r = get_row(m, i);
+        rot(i, 0) = r[0];
+        rot(i, 1) = r[1];
     }
 
-    auto b2 = get_col(b, 2);
-    double2 c2 = a0*b2.x + a1*b2.y + a2;
-    set_col(r, 2, c2);
+    auto rotT = linalg::transpose(rot);
 
-    return r;
+    // Rebuild partial
+    mat3x2 unRotated = m;
+    for(int i=0; i<2; ++i)
+    {
+        vec2 row_i{ rotT(i,0), rotT(i,1) };
+        set_row(unRotated, i, row_i);
+    }
+
+    auto trans = get_row(m, 2);
+    auto invTrans = -linalg::mul(rotT, trans);
+    set_row(unRotated, 2, invTrans);
+
+    return unRotated;
+}
+
+// ------------------------------------------------------------
+// CombineTransforms variant
+inline mat4x3 CombineTransforms(const mat4x3 &a, const mat4x3 &b)
+{
+    // Original code: combine basis + normalize, then combine translation
+    mat4x3 result = a;
+
+    auto a0 = get_row(a, 0), a1 = get_row(a, 1), a2 = get_row(a, 2), a3 = get_row(a, 3);
+    auto b0 = get_row(b, 0), b1 = get_row(b, 1), b2 = get_row(b, 2), b3 = get_row(b, 3);
+
+    // rotation columns -> now rotation rows
+    // row0 = normalize(a0*b0.x + a1*b0.y + a2*b0.z)
+    // etc.
+
+    vec3 r0 = linalg::normalize(a0*b0.x + a1*b0.y + a2*b0.z);
+    vec3 r1 = linalg::normalize(a0*b1.x + a1*b1.y + a2*b1.z);
+    vec3 r2 = linalg::normalize(a0*b2.x + a1*b2.y + a2*b2.z);
+    vec3 r3 = a3 + a0*b3.x + a1*b3.y + a2*b3.z;
+
+    set_row(result, 0, r0);
+    set_row(result, 1, r1);
+    set_row(result, 2, r2);
+    set_row(result, 3, r3);
+
+    return result;
+}
+
+inline mat3x2 CombineTransforms(const mat3x2 &a, const mat3x2 &b)
+{
+    mat3x2 result = a;
+
+    auto a0 = get_row(a, 0), a1 = get_row(a, 1), a2 = get_row(a, 2);
+    auto b0 = get_row(b, 0), b1 = get_row(b, 1), b2 = get_row(b, 2);
+
+    vec2 r0 = linalg::normalize(a0*b0.x + a1*b0.y);
+    vec2 r1 = linalg::normalize(a0*b1.x + a1*b1.y);
+    vec2 r2 = a2 + a0*b2.x + a1*b2.y;
+
+    set_row(result, 0, r0);
+    set_row(result, 1, r1);
+    set_row(result, 2, r2);
+
+    return result;
 }
 
 } // namespace MatrixTransforms

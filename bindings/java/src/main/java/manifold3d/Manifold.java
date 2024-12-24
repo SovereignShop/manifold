@@ -4,7 +4,6 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 
-import manifold3d.pub.DoubleMesh;
 
 import manifold3d.UIntVector;
 import manifold3d.FloatVector;
@@ -17,29 +16,25 @@ import manifold3d.ManifoldPair;
 import manifold3d.ManifoldVector;
 import manifold3d.manifold.MeshGL;
 import manifold3d.manifold.ExportOptions;
-import manifold3d.manifold.CrossSection;
-import manifold3d.manifold.CrossSectionVector;
 
-import manifold3d.pub.DoubleMesh;
 import manifold3d.pub.Box;
-import manifold3d.pub.Properties;
+import manifold3d.pub.Polygons;
+import manifold3d.pub.PolygonsVector;
 import manifold3d.pub.SmoothnessVector;
 import manifold3d.pub.OpType;
 
-import manifold3d.glm.DoubleVec3Vector;
-import manifold3d.glm.DoubleMat4x3;
-import manifold3d.glm.DoubleVec2;
-import manifold3d.glm.DoubleVec3;
-import manifold3d.glm.IntegerVec3;
+import manifold3d.linalg.DoubleVec3Vector;
+import manifold3d.linalg.DoubleMat4x3;
+import manifold3d.linalg.DoubleVec2;
+import manifold3d.linalg.DoubleVec3;
+import manifold3d.linalg.IntegerVec3;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = {"manifold.h", "meshIO.h"},
-          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR,
-                       LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS,
-                       LibraryPaths.CLIPPER_LIB_DIR},
-          link = { "manifold", "Clipper2" })
+@Platform(compiler = "cpp17", include = {"manifold/manifold.h", "manifold/meshIO.h"},
+          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR },
+          link = { "manifold" })
 @Namespace("manifold")
 public class Manifold extends Pointer {
     static {
@@ -47,20 +42,12 @@ public class Manifold extends Pointer {
         String osName = System.getProperty("os.name").toLowerCase();
         if (osName.contains("linux")) {
             try {
-                System.load(Loader.extractResource("/libfreetype.so", null, "libfreetype", ".so").getAbsolutePath());
-                System.load(Loader.extractResource("/libmeshIO.so", null, "libmeshIO", ".so").getAbsolutePath());
-                System.load(Loader.extractResource("/libmeshIO.so", null, "libmeshIO", ".so").getAbsolutePath());
-                System.load(Loader.extractResource("/libClipper2.so", null, "libClipper2", ".so").getAbsolutePath());
                 System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         } else if (osName.contains("windows")) {
             try {
-                System.out.println("Loading meshIO");
-                System.load(Loader.extractResource("/meshIO.dll", null, "meshIO", ".dll").getAbsolutePath());
-                System.out.println("Loading Clipper");
-                System.load(Loader.extractResource("/Clipper2.dll", null, "Clipper2", ".dll").getAbsolutePath());
                 System.out.println("Loading manifold");
                 System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
                 System.out.println("Finished Loading.");
@@ -69,16 +56,9 @@ public class Manifold extends Pointer {
             }
         } else if (osName.contains("mac")) {
             try {
-                System.out.println("Loading freetype");
-                System.load(Loader.extractResource("/libfreetype.6.16.0.dylib", null, "libfreetype", ".dylib").getAbsolutePath());
-                System.out.println("Loading meshIO");
-                System.load(Loader.extractResource("/libmeshIO.dylib", null, "libmeshIO", ".dylib").getAbsolutePath());
                 System.out.println("Loading Manifold");
                 System.load(Loader.extractResource("/libmanifold.2.4.5.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
-                System.out.println("Loading Clipper");
-                System.load(Loader.extractResource("/libClipper2.1.3.0.dylib", null, "libClipper2", ".dylib").getAbsolutePath());
                 System.out.println("Finished Loading.");
-
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -101,11 +81,10 @@ public class Manifold extends Pointer {
     public Manifold(@ByRef MeshGL mesh, @ByRef FloatVector propertyTolerance) { allocate(mesh, propertyTolerance); }
     private native void allocate(@ByRef MeshGL mesh, @ByRef FloatVector propertyTolerance);
 
-    public Manifold(@ByRef DoubleMesh mesh) { allocate(mesh); }
-    private native void allocate(@ByRef DoubleMesh mesh);
-
     // Methods
-    @Name("GetMesh") public native @ByVal DoubleMesh getMesh();
+    public MeshGL getMesh() {
+        return getMeshGL(new IntegerVec3(0, 1, 2));
+    }
     @Name("GetMeshGL") public native @ByVal MeshGL getMeshGL(@ByRef IntegerVec3 normalIdx);
     @Name("IsEmpty") public native boolean isEmpty();
     @Name("Status") public native @Cast("manifold::Manifold::Error") int status();
@@ -117,7 +96,6 @@ public class Manifold extends Pointer {
     @Name("BoundingBox") public native @ByVal Box boundingBox();
     @Name("Precision") public native float precision();
     @Name("Genus") public native int genus();
-    @Name("GetProperties")  public native @ByVal Properties getProperties();
     @Name("CalculateCurvature") public native @ByVal Manifold calculateCurvature(int gaussianIdx, int meanIdx);
     @Name("OriginalID") public native int originalID();
     @Name("AsOriginal") public native @ByVal Manifold asOriginal();
@@ -177,13 +155,13 @@ public class Manifold extends Pointer {
     public native @ByVal ManifoldVector decompose();
 
     @Name("Slice")
-    public native @ByVal CrossSection slice(float height);
-    public CrossSection slice() {
+    public native @ByVal Polygons slice(float height);
+    public Polygons slice() {
         return this.slice((float) 0.0);
     }
 
     @Name("Slices")
-    public native @ByVal CrossSectionVector slices(float bottomZ, float topZ, int nSlices);
+    public native @ByVal PolygonsVector slices(float bottomZ, float topZ, int nSlices);
 
     @Name("CalculateNormals")
     public native @ByVal Manifold calculateNormals(int normalIdx, float minSharpAngle);
@@ -195,7 +173,7 @@ public class Manifold extends Pointer {
     public native @ByVal Manifold smoothOut(float minSharpAngle, float minSmoothness);
 
     @Name("Project")
-    public native @ByVal CrossSection project();
+    public native @ByVal Polygons project();
 
     @Name("RefineToLength")
     public native @ByVal Manifold refineToLength(float length);
@@ -214,7 +192,6 @@ public class Manifold extends Pointer {
 
     //// Static methods
     public static native @ByVal Manifold Smooth(@ByRef MeshGL mesh, @ByRef SmoothnessVector sharpenedEdges);
-    public static native @ByVal Manifold Smooth(@ByRef DoubleMesh mesh, @ByRef SmoothnessVector sharpenedEdges);
     public static native @ByVal Manifold Tetrahedron();
     public static native @ByVal Manifold Cube(@ByRef DoubleVec3 size, boolean center);
 
@@ -224,10 +201,10 @@ public class Manifold extends Pointer {
     public static native @ByVal Manifold Cylinder(float height, float radius);
 
     public static native @ByVal Manifold Sphere(float radius, int circularSegments);
-    public static native @ByVal Manifold Extrude(@ByRef CrossSection crossSection, float height, int nDivisions, float twistDegrees, @ByRef DoubleVec2 scaleTop);
+    public static native @ByVal Manifold Extrude(@ByRef Polygons crossSection, float height, int nDivisions, float twistDegrees, @ByRef DoubleVec2 scaleTop);
 
-    public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments);
-    public static native @ByVal Manifold Revolve(@ByRef CrossSection crossSection, int circularSegments, float revolveDegrees);
+    public static native @ByVal Manifold Revolve(@ByRef Polygons crossSection, int circularSegments);
+    public static native @ByVal Manifold Revolve(@ByRef Polygons crossSection, int circularSegments, float revolveDegrees);
     public static native @ByVal Manifold Compose(@ByRef ManifoldVector manifolds);
 
 

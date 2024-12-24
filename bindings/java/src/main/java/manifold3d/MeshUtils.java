@@ -6,9 +6,9 @@ import org.bytedeco.javacpp.annotation.*;
 import manifold3d.LibraryPaths;
 import manifold3d.manifold.CrossSectionVector;
 import manifold3d.manifold.CrossSection;
-import manifold3d.glm.DoubleVec4;
-import manifold3d.glm.DoubleVec3Vector;
-import manifold3d.glm.DoubleMat4x3Vector;
+import manifold3d.linalg.DoubleVec4;
+import manifold3d.linalg.DoubleVec3Vector;
+import manifold3d.linalg.DoubleMat4x3Vector;
 import manifold3d.pub.PolygonsVector;
 import manifold3d.pub.Polygons;
 import manifold3d.pub.SimplePolygon;
@@ -19,7 +19,7 @@ import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
-@Platform(compiler = "cpp17", include = {"mesh_utils.hpp", "buffer_utils.hpp"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR, LibraryPaths.MANIFOLD_LIB_DIR_WINDOWS }, link = {"manifold"})
+@Platform(compiler = "cpp17", include = {"mesh_utils.hpp", "buffer_utils.hpp"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR }, link = {"manifold"})
 public class MeshUtils extends Pointer {
     static { Loader.load(); }
 

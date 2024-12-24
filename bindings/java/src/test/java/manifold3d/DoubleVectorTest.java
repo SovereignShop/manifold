@@ -1,8 +1,8 @@
 package manifold3d;
 
 import org.junit.Test;
-import manifold3d.glm.DoubleVec3;
-import manifold3d.glm.DoubleVec4;
+import manifold3d.linalg.DoubleVec3;
+import manifold3d.linalg.DoubleVec4;
 
 public class DoubleVectorTest {
 

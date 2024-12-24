@@ -2,7 +2,7 @@ package manifold3d;
 
 import org.junit.Test;
 import manifold3d.Manifold;
-import manifold3d.glm.DoubleVec2;
+import manifold3d.linalg.DoubleVec2;
 import manifold3d.pub.DoubleMesh;
 import manifold3d.pub.SimplePolygon;
 import manifold3d.pub.Polygons;

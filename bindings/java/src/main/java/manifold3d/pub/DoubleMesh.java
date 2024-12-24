@@ -1,13 +1,13 @@
 package manifold3d.pub;
 
-import manifold3d.glm.DoubleVec3Vector;
-import manifold3d.glm.IntegerVec3Vector;
-import manifold3d.glm.DoubleVec4Vector;
+import manifold3d.linalg.DoubleVec3Vector;
+import manifold3d.linalg.IntegerVec3Vector;
+import manifold3d.linalg.DoubleVec4Vector;
 
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-@Platform(compiler = "cpp17", include = "public.h")
+@Platform(compiler = "cpp17", include = "manifold/manifold.h")
 @Namespace("manifold")
 @Name("Mesh")
 public class DoubleMesh extends Pointer {

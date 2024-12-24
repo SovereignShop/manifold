@@ -3,12 +3,12 @@ package manifold3d.manifold;
 import org.bytedeco.javacpp.*;
 import org.bytedeco.javacpp.annotation.*;
 
-import manifold3d.glm.DoubleVec4;
-import manifold3d.glm.DoubleVec4Vector;
-import manifold3d.glm.IntegerVec3;
-import manifold3d.glm.IntegerVec4;
+import manifold3d.linalg.DoubleVec4;
+import manifold3d.linalg.DoubleVec4Vector;
+import manifold3d.linalg.IntegerVec3;
+import manifold3d.linalg.IntegerVec4;
 
-@Platform(compiler = "cpp17", include = "meshIO.h")
+@Platform(compiler = "cpp17", include = "manifold/meshIO.h")
 @Namespace("manifold")
 public class Material extends Pointer {
     static { Loader.load(); }
