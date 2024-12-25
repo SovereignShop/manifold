@@ -1015,7 +1015,7 @@ std::vector<int> Manifold::GetHalfedges() const {
   const Impl& impl = *GetCsgLeafNode().GetImpl();
   const manifold::Vec<Halfedge> halfedges = impl.halfedge_;
   std::vector<int> ret;
-  ret.reserve(halfedges.size());
+  ret.reserve(halfedges.size() * 3);
   for (auto& halfedge: halfedges) {
     ret.push_back(halfedge.startVert);
     ret.push_back(halfedge.endVert);
@@ -1028,7 +1028,7 @@ std::vector<float> Manifold::GetFaceNormals() const {
   const Impl& impl = *GetCsgLeafNode().GetImpl();
   const Vec<vec3> faceNormals = impl.faceNormal_;
   std::vector<float> ret;
-  ret.reserve(faceNormals.size());
+  ret.reserve(faceNormals.size() * 3);
   for (auto& normal: faceNormals) {
     ret.push_back(normal[0]);
     ret.push_back(normal[1]);
@@ -1042,7 +1042,7 @@ std::vector<float> Manifold::GetVertices() const {
   const Impl& impl = *GetCsgLeafNode().GetImpl();
   const Vec<vec3> verts = impl.vertPos_;
   std::vector<float> ret;
-  ret.reserve(verts.size());
+  ret.reserve(verts.size() * 3);
   for (auto& vert: verts) {
     ret.push_back(vert[0]);
     ret.push_back(vert[1]);
@@ -1055,7 +1055,7 @@ std::vector<int> Manifold::GetTriangles() const {
   const Impl& impl = *GetCsgLeafNode().GetImpl();
   const Vec<ivec3> triVerts = impl.meshRelation_.triProperties;
   std::vector<int> ret;
-  ret.reserve(triVerts.size());
+  ret.reserve(triVerts.size() * 3);
   for (auto& triVert: triVerts) {
     ret.push_back(triVert[0]);
     ret.push_back(triVert[1]);
