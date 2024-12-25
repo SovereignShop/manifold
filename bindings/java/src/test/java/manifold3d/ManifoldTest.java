@@ -37,7 +37,7 @@ public class ManifoldTest {
         MeshGL intersectMesh = intersection.getMesh();
         MeshGL unionMesh = union.getMesh();
         ExportOptions opts = new ExportOptions();
-        opts.faceted(false);
+        opts.faceted(true);
 
         MeshIO.ExportMesh("CubeMinusSphere.stl", diffMesh, opts);
         MeshIO.ExportMesh("CubeIntersectSphere.glb", intersectMesh, opts);
