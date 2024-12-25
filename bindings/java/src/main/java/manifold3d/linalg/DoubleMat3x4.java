@@ -51,14 +51,13 @@ public class DoubleMat3x4 extends DoublePointer implements Iterable<DoubleVec3> 
                                 @ByRef DoubleVec3 col3, @ByRef DoubleVec3 col4);
 
     public DoubleMat3x4(double c0, double c1, double c2, double c3,
-                  double c4, double c5, double c6, double c7,
-                  double c8, double c9, double c10, double c11) {
-        allocate(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11);
+                        double c4, double c5, double c6, double c7,
+                        double c8, double c9, double c10, double c11) {
+        allocate(new DoubleVec3(c0, c1, c2),
+                 new DoubleVec3(c3, c4, c5),
+                 new DoubleVec3(c6, c6, c8),
+                 new DoubleVec3(c9, c10, c11));
     }
-    public native void allocate(double c0, double c1, double c2, double c3,
-                                double c4, double c5, double c6, double c7,
-                                double c8, double c9, double c10, double c11);
-
     @Name("operator[]") public native @ByRef DoubleVec3 getColumn(int i);
 
     public native @Name("operator=") @ByRef DoubleMat3x4 put(@ByRef DoubleMat3x4 rhs);

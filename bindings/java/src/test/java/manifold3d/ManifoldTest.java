@@ -4,11 +4,11 @@ import org.junit.Test;
 import manifold3d.Manifold;
 import manifold3d.linalg.DoubleMat3x4;
 import manifold3d.linalg.DoubleMat3x4Vector;
-import manifold3d.pub.DoubleMesh;
 import manifold3d.linalg.DoubleVec3;
 import manifold3d.linalg.DoubleVec2;
 import manifold3d.linalg.DoubleVec3Vector;
 import manifold3d.MeshUtils;
+import manifold3d.manifold.MeshGL;
 import manifold3d.manifold.MeshIO;
 import manifold3d.manifold.CrossSectionVector;
 import manifold3d.manifold.CrossSection;
@@ -22,7 +22,7 @@ public class ManifoldTest {
     @Test
     public void testManifold() {
         // Existing test code
-        DoubleMesh mesh = new DoubleMesh();
+        MeshGL mesh = new MeshGL();
         Manifold manifold = new Manifold(mesh);
 
         Manifold sphere = Manifold.Sphere(10.0f, 20);
@@ -33,9 +33,9 @@ public class ManifoldTest {
         Manifold intersection = cube.intersect(sphere);
         Manifold union = cube.add(sphere);
 
-        DoubleMesh diffMesh = diff.getMesh();
-        DoubleMesh intersectMesh = intersection.getMesh();
-        DoubleMesh unionMesh = union.getMesh();
+        MeshGL diffMesh = diff.getMesh();
+        MeshGL intersectMesh = intersection.getMesh();
+        MeshGL unionMesh = union.getMesh();
         ExportOptions opts = new ExportOptions();
         opts.faceted(false);
 
@@ -44,10 +44,10 @@ public class ManifoldTest {
         MeshIO.ExportMesh("CubeUnionSphere.obj", unionMesh, opts);
 
         Manifold hull = cylinder.convexHull(cube.translateZ(100.0));
-        DoubleMesh hullMesh = hull.getMesh();
+        MeshGL hullMesh = hull.getMesh();
 
         MeshIO.ExportMesh("hull.glb", hullMesh, opts);
-        assert hull.getProperties().volume() > 0.0;
+        assert hull.volume() > 0.0;
 
         DoubleMat3x4 frame1 = new DoubleMat3x4(1).translate(new DoubleVec3(20, 0, 0));
         DoubleMat3x4 frame2 = new DoubleMat3x4(1)
@@ -59,9 +59,7 @@ public class ManifoldTest {
                                        new DoubleMat3x4Vector(frame1, frame2),
                                        MeshUtils.LoftAlgorithm.EagerNearestNeighbor);
 
-        assert loft.getProperties().volume() > 0.0;
-
-        DoubleVec3Vector vertPos = hullMesh.vertPos();
+        assert loft.volume() > 0.0;
 
         // New test code: Creating a simple texture and exporting a GLB file
         // Define the dimensions of the height map
@@ -86,10 +84,10 @@ public class ManifoldTest {
 
         //System.out.println(texturedSurface.status());
         // Export the Manifold to a GLB file
-        DoubleMesh texturedMesh = texturedSurface.getMesh();
+        MeshGL texturedMesh = texturedSurface.getMesh();
         MeshIO.ExportMesh("TexturedSurface.glb", texturedMesh, opts);
 
         // Verify that the Manifold has a positive volume
-        assert texturedSurface.getProperties().volume() > 0.0;
+        assert texturedSurface.volume() > 0.0;
     }
 }

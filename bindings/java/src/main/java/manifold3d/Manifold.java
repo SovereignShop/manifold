@@ -188,6 +188,12 @@ public class Manifold extends Pointer {
     @Name("GetTriangles")
     public native @ByVal IntVector getTriangles();
 
+    @Name("Volume")
+    public native double volume();
+
+    @Name("SurfaceArea")
+    public native double surfaceArea();
+
     @Name("BatchBoolean")
     public static native @ByVal Manifold BatchBoolean(@ByRef ManifoldVector manifolds, @Cast("manifold::OpType") int op);
 
