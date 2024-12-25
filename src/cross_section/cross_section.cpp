@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "text_to_polygon.h"
 #include "manifold/cross_section.h"
 
 #include "../utils.h"
@@ -298,6 +299,19 @@ std::shared_ptr<const PathImpl> CrossSection::GetPaths() const {
   paths_ = shared_paths(::transform(paths_->paths_, transform_));
   transform_ = mat2x3(la::identity);
   return paths_;
+}
+
+/**
+ * Renders text to a cross section.
+ *
+ * @param fontFile path to a .ttf font file.
+ * @param text Text to render as polygon
+ * @param pixelHeight freetype pixelHeight.
+ * @param interpRes Resolution of interpolation of curves.
+ */
+CrossSection CrossSection::Text(const std::string& fontFile, const std::string& text, u_int32_t pixelHeight, int interpRes, FillRule fillRule) {
+  Polygons polys = TextToPolygon::textToPolygons(fontFile, text, pixelHeight, interpRes);
+  return CrossSection(polys, fillRule);
 }
 
 /**

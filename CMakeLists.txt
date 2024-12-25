@@ -108,7 +108,6 @@ if(MANIFOLD_FUZZ)
   set(FUZZTEST_FUZZING_MODE ON)
   # address sanitizer required
   add_compile_options(-fsanitize=address)
-  add_link_options(-fsanitize=address)
 endif()
 
 if(TRACY_ENABLE)
@@ -205,6 +204,7 @@ if("${isSystemDir}" STREQUAL "-1")
   set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 endif("${isSystemDir}" STREQUAL "-1")
 
+message(STATUS "TESTING")
 include(${PROJECT_SOURCE_DIR}/cmake/manifoldDeps.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/configHelper.cmake)
 
@@ -248,6 +248,9 @@ write_basic_package_version_file(
   VERSION ${MANIFOLD_VERSION}
   COMPATIBILITY SameMajorVersion
 )
+
+install(TARGETS TextToPolygon EXPORT manifoldTargets)
+target_link_libraries(manifold PUBLIC TextToPolygon)
 
 # Location of inputs for CMake find_package - see:
 # https://cmake.org/cmake/help/latest/command/find_package.html

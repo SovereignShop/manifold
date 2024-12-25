@@ -6,296 +6,424 @@ name: CI
 # events but only for the master branch
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master ]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+    branches: [ master, main ]
 
 jobs:
   build:
-    name: CrossSection:${{matrix.cross_section}} ${{matrix.parallelization == 'ON'}} GCC ${{matrix.gcc}}
     timeout-minutes: 45
     strategy:
       matrix:
-        cross_section: [ON]
-        parallelization: [OFF, ON]
-        gcc: [13, 14]
-        include:
-          - cross_section: OFF
-            parallelization: ON
-            gcc: 14
-    runs-on: ubuntu-24.04
-    env:
-      CC: gcc-${{ matrix.gcc }}
-      CXX: g++-${{ matrix.gcc }}
-    steps:
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libgtest-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev lcov
-        python -m pip install -U trimesh pytest
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
-    - name: Build ${{matrix.parallelization}}
-      if: matrix.parallelization != 'OFF'
-      run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PYBIND=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_FLAGS=-UNDEBUG -DMANIFOLD_CROSS_SECTION=${{matrix.cross_section}} -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallelization}} .. && make
-    - name: Test ${{matrix.parallelization}}
-      if: matrix.parallelization != 'OFF'
-      run: |
-        cd build/test
-        ./manifold_test
-    - name: Test Python bindings ${{matrix.parallelization}}
-      if: matrix.parallelization != 'OFF' && matrix.cross_section == 'ON'
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
-        python3 bindings/python/examples/run_all.py -e
-        python3 -m pytest
-    - name: Coverage Report
-      # only do code coverage for default sequential backend, it seems that TBB
-      # backend will cause failure
-      # perhaps issue related to invalid memory access?
-      if: matrix.parallelization == 'OFF'
-      run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_CROSS_SECTION=${{matrix.cross_section}} -DMANIFOLD_PAR=${{matrix.parallelization}} -DCODE_COVERAGE=ON .. && make
-        lcov --capture --gcov-tool gcov-${{ matrix.gcc }} --ignore-errors mismatch --initial --directory . --output-file ./code_coverage_init.info
-        cd test
-        ./manifold_test
-        cd ../
-        lcov --capture --gcov-tool gcov-${{ matrix.gcc }} --ignore-errors mismatch --directory . --output-file ./code_coverage_test.info
-        lcov --add-tracefile ./code_coverage_init.info --add-tracefile ./code_coverage_test.info --output-file ./code_coverage_total.info
-        lcov --extract ./code_coverage_total.info "/*/manifold/src/*" --output-file ./code_coverage.info
-        cd ../
-    - uses: codecov/codecov-action@v5
-      if: matrix.parallelization == 'OFF'
-      with:
-        disable_search: true
-        files: build/code_coverage.info
-        fail_ci_if_error: false
-        name: ${{matrix.parallelization}}
-        token: ${{secrets.CODECOV_TOKEN}}
-        verbose: true
-    - name: test cmake consumer
-      run: |
-        cd build
-        sudo cmake --install .
-        cd ..
-        ./scripts/test-cmake.sh
-
-  build_cbind:
-    timeout-minutes: 30
+        cuda_support: [OFF]
+        parallel_backend: [NONE, TBB]
     runs-on: ubuntu-22.04
+    if: github.event.pull_request.draft == false
+    outputs:
+      java_package_version_changed: ${{ steps.check_version.outputs.changed }}
+    container:
+      image: docker://nvidia/cuda:12.0.1-devel-ubuntu22.04
     steps:
     - name: Install dependencies
       run: |
-        sudo apt-get -y update
-        DEBIAN_FRONTEND=noninteractive sudo apt install -y libgtest-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev python3 python3-distutils python3-pip
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
-    - name: Build C bindings with TBB
-      run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PYBIND=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=ON .. && make
-    - name: Test
-      run: |
-        cd build/test
-        ./manifold_test --gtest_filter=CBIND.*
-
-  build_wasm:
-    timeout-minutes: 30
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        parallelization: [OFF, ON]
-    steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get -y update
-        DEBIAN_FRONTEND=noninteractive sudo apt install -y nodejs
-    - uses: actions/checkout@v4
-    - name: Setup WASM
-      run: |
-        # setup emscripten
-        git clone https://github.com/emscripten-core/emsdk.git
-        cd emsdk
-        ./emsdk install 3.1.64
-        ./emsdk activate 3.1.64
-    - uses: jwlawson/actions-setup-cmake@v2
-    - name: Build WASM ${{matrix.parallelization}}
-      run: |
-        source ./emsdk/emsdk_env.sh
-        mkdir build
-        cd build
-        emcmake cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DMANIFOLD_PAR=${{matrix.parallelization}} .. && emmake make
-    - name: Test WASM
-      if: matrix.parallelization == 'OFF'
-      run: |
-        cd build/test
-        node ./manifold_test.js
-    - name: Test examples
-      if: matrix.parallelization == 'OFF'
-      run: |
-        cd bindings/wasm/examples
-        npm ci
-        npm run build
-        npm test
-        cp ../manifold.* ./dist/
-    - name: Upload WASM files
-      uses: actions/upload-artifact@v4
-      if: github.event_name == 'push' && matrix.parallelization == 'OFF'
+        apt-get -y update
+        DEBIAN_FRONTEND=noninteractive apt install -y libomp-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev python3 python3-distutils python3-pip lcov
+        pip install trimesh
+    - uses: actions/checkout@v3
       with:
-        name: wasm
-        path: bindings/wasm/examples/dist/
-        retention-days: 90
-        overwrite: true
-
-  build_windows:
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        parallelization: [OFF, ON]
-    runs-on: windows-2019
-    steps:
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
-    - uses: ilammy/msvc-dev-cmd@v1
-    - name: Build ${{matrix.parallelization}}
-      shell: powershell
+        submodules: recursive
+        fetch-depth: 2
+    - uses: jwlawson/actions-setup-cmake@v1.12
+    - name: Setup Java
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+    - name: Install Maven
       run: |
-        cmake . -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DMANIFOLD_DEBUG=ON -DMANIFOLD_PAR=${{matrix.parallelization}} -A x64 -B build
+        apt-get update
+        apt-get install -y maven
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    - name: Build ${{matrix.backend}}
+      run: |
+        mkdir build
         cd build
-        cmake --build . --target ALL_BUILD --config Release
-    - name: Test ${{matrix.parallelization}}
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
+    - name: Get version
+      id: get_version
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
+      shell: bash
+    - name: Check if version has changed
+      id: check_version
       shell: bash
       run: |
-        cd build/bin/Release
-        ./manifold_test.exe
-        cd ../../
-    - name: test cmake consumer
+        if git diff --quiet HEAD~1 -- bindings/java/version.txt
+        then
+          echo "Version Unchanged!"
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Version Changed!"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Build Java package
+      shell: bash
       run: |
-        cd build
-        cmake --install .
-        cd ..
-        ./scripts/test-cmake.sh
+        cd bindings/java
 
-  build_mxe:
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        parallelization: [OFF, ON]
-    runs-on: ubuntu-latest
-    container: openscad/mxe-x86_64-gui:latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: |
-        mkdir build
-        cd build
-        export MXEDIR=/mxe
-        export MXE_TARGETS=x86_64-w64-mingw32.static.posix
-        export MXEDIR=$HOME/openscad_deps/mxe
-        export MXETARGETDIR=$MXEDIR/usr/$MXE_TARGETS
-        export PATH=/mxe/usr/bin:$PATH
-        export CMAKE=$MXE_TARGETS-cmake
-        $CMAKE -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DMANIFOLD_PYBIND=OFF -DMANIFOLD_CBIND=OFF -DMANIFOLD_DEBUG=ON -DMANIFOLD_PAR=${{matrix.parallelization}} .. && make
+        BACKEND=""
+        if [ "${{matrix.parallel_backend}}" = "NONE" ] && [ "${{matrix.cuda_support}}" = "ON" ]; then
+            BACKEND="-cuda"
+        elif [ "${{matrix.parallel_backend}}" = "NONE" ] && [ "${{matrix.cuda_support}}" = "OFF" ]; then
+            BACKEND=""
+        elif [ "${{matrix.cuda_support}}" = "ON" ]; then
+            BACKEND="-${{matrix.parallel_backend}}-cuda"
+        else
+            BACKEND="-${{matrix.parallel_backend}}"
+        fi
+
+        mvn versions:set -DnewVersion=$(cat version.txt) --file pom.xml
+        mvn package -Dos.classifier=linux$BACKEND-x86_64
+    # - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
+    #   # note that the test for CUDA backend does not really test CUDA, as we
+    #   # don't have CUDA GPU on GitHub Action
+    #   if: matrix.parallel_backend != 'NONE' || matrix.cuda_support != 'OFF'
+    #   run: |
+    #     export PYTHONPATH=$PYTHONPATH:$(pwd)/build/bindings/python
+    #     cd build/test
+    #     ./manifold_test
+    #- name: Coverage Report
+    #  # only do code coverage for default sequential backend, it seems that TBB
+    #  # backend will cause failure
+    #  # perhaps issue related to invalid memory access?
+    #  if: matrix.parallel_backend == 'NONE' && matrix.cuda_support == 'OFF'
+    #  run: |
+    #    cd build
+    #    cmake -DOUTPUT_TO_BIN=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -DCODE_COVERAGE=ON .. && make
+    #    lcov --capture --initial --directory . --output-file ./code_coverage_init.info
+    #    cd bin
+    #    ./manifold_test
+    #    cd ../
+    #    lcov --capture --directory . --output-file ./code_coverage_test.info
+    #    lcov --add-tracefile ./code_coverage_init.info --add-tracefile ./code_coverage_test.info --output-file ./code_coverage_total.info
+    #    lcov --remove ./code_coverage_total.info '/usr/*' '*/third_party/*' '*/test/*' '*/extras/*' '*/bindings/*' --output-file ./code_coverage.info
+    - uses: codecov/codecov-action@v2
+      with:
+        files: build/code_coverage.info
+        fail_ci_if_error: false
+        name: ${{matrix.parallel_backend}}-${{matrix.cuda_support}}
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: manifold_java_bindings_linux_${{matrix.parallel_backend}}_${{matrix.cuda_support}}_${{env.VERSION}}
+        path: bindings/java/target/*.jar
+
+  # build_cbind:
+  #   timeout-minutes: 30
+  #   runs-on: ubuntu-22.04
+  #   if: github.event.pull_request.draft == false
+  #   container:
+  #     image: docker://nvidia/cuda:12.0.1-devel-ubuntu22.04
+  #   steps:
+  #   - name: Install dependencies
+  #     run: |
+  #       apt-get -y update
+  #       DEBIAN_FRONTEND=noninteractive apt install -y libomp-dev libassimp-dev git libtbb-dev pkg-config libpython3-dev python3 python3-distutils python3-pip
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: jwlawson/actions-setup-cmake@v1.12
+  #   - name: Build C bindings with TBB and CUDA
+  #     run: |
+  #       mkdir build
+  #       cd build
+  #       cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_CBIND=ON -DMANIFOLD_PAR=TBB -DMANIFOLD_USE_CUDA=ON .. && make
+  #   - name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
+  #     # note that the test for CUDA backend does not really test CUDA, as we
+  #     # don't have CUDA GPU on GitHub Action
+  #     run: |
+  #       cd build/test
+  #       ./manifold_test --gtest_filter=CBIND.*
+
+  # build_wasm:
+  #   timeout-minutes: 30
+  #   runs-on: ubuntu-22.04
+  #   if: github.event.pull_request.draft == false
+  #   steps:
+  #   - name: Install dependencies
+  #     run: |
+  #       sudo apt-get -y update
+  #       DEBIAN_FRONTEND=noninteractive sudo apt install -y nodejs
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - name: Setup WASM
+  #     run: |
+  #       # setup emscripten
+  #       git clone https://github.com/emscripten-core/emsdk.git
+  #       cd emsdk
+  #       ./emsdk install latest
+  #       ./emsdk activate latest
+  #   - uses: jwlawson/actions-setup-cmake@v1.12
+  #   - name: Build WASM
+  #     run: |
+  #       source ./emsdk/emsdk_env.sh
+  #       mkdir build
+  #       cd build
+  #       emcmake cmake -DCMAKE_BUILD_TYPE=Release .. && emmake make
+  #   - name: Test WASM
+  #     run: |
+  #       cd build/test
+  #       node ./manifold_test.js
+  #   - name: Test examples
+  #     run: |
+  #       cd bindings/wasm/examples
+  #       npm ci
+  #       npm run build
+  #       npm test
+  #   - name: Upload WASM files
+  #     uses: actions/upload-artifact@v3
+  #     with:
+  #       name: wasm
+  #       path: bindings/wasm/examples/dist/
+  #       retention-days: 90
+
+  # build_windows:
+  #   timeout-minutes: 30
+  #   strategy:
+  #     matrix:
+  #       parallel_backend: [NONE]
+  #       cuda_support: [OFF]
+  #     max-parallel: 1
+  #   runs-on: windows-2019
+  #   if: github.event.pull_request.draft == false
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #       fetch-depth: 2
+  #   - uses: jwlawson/actions-setup-cmake@v1.12
+  #   - uses: ilammy/msvc-dev-cmd@v1
+  #   - uses: actions/setup-java@v2
+  #     with:
+  #       java-version: '11'
+  #       distribution: 'adopt'
+  #   - name: Install Maven
+  #     run: choco install maven
+  #   - name: Install CUDA
+  #     if: matrix.backend == 'CUDA'
+  #     env:
+  #       cuda: "11.3.0"
+  #     shell: powershell
+  #     run: |
+  #       Invoke-RestMethod https://raw.githubusercontent.com/ptheywood/cuda-cmake-github-actions/21811d232fc775fa8d44dddf7f8c5ce2cf8d2b81/scripts/actions/install_cuda_windows.ps1 -OutFile install_cuda_windows.ps1
+  #       .\install_cuda_windows.ps1
+  #   - name: nvcc check
+  #     if: matrix.backend == 'CUDA'
+  #     shell: powershell
+  #     run: |
+  #       nvcc -V
+  #       ls $env:CUDA_PATH
+  #       ls $env:CUDA_PATH\bin
+  #       ls $env:CUDA_PATH\include
+  #   - name: Install Assimp from source
+  #     shell: bash
+  #     run: |
+  #       git clone https://github.com/assimp/assimp.git
+  #       cd assimp
+  #       git checkout v5.2.5
+  #       cmake CMakeLists.txt -DASSIMP_BUILD_ZLIB=ON -DCMAKE_BUILD_TYPE=Release
+  #       cmake --build . --config Release
+  #       cmake --install . --config Release
+  #       echo "C:/Program Files (x86)/Assimp/bin/" >> $GITHUB_PATH
+  #   - name: Add Assimp to PATH
+  #     shell: powershell
+  #     run: |
+  #       Add-Content $env:GITHUB_PATH "C:/Program Files (x86)/Assimp/bin/"
+  #   - name: Build ${{matrix.backend}}
+  #     shell: powershell
+  #     run: |
+  #       cmake . -DOUTPUT_TO_BIN=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DMANIFOLD_EXPORT=ON -DCMAKE_BUILD_TYPE=Release -B build -DMANIFOLD_DEBUG=ON -DPYBIND11_FINDPYTHON=OFF -DMANIFOLD_PAR=${{matrix.parallel_backend}} -DMANIFOLD_USE_CUDA=${{matrix.cuda_support}} -A x64
+  #       cd build
+  #       cmake --build . --target ALL_BUILD --config Release
+  #   - name: List DLL dependencies
+  #     shell: powershell
+  #     run: |
+  #       echo "List DLL dependencies"
+  #       $currentDir = Get-Location
+  #       $binPath = Join-Path -Path $currentDir -ChildPath "build/bin"
+  #       Add-Content $env:GITHUB_PATH $binPath
+  #   - name: Build Java package
+  #     run: |
+  #       cd bindings/java
+  #       mvn versions:set -DnewVersion="$(cat version.txt)" --file pom.xml
+  #       mvn package
+  #   #- name: Test ${{matrix.parallel_backend}} with CUDA ${{matrix.cuda_support}}
+  #   #  shell: bash
+  #   #  run: |
+  #   #    cd build/bin
+  #   #    ./Release/manifold_test.exe
+  #   - name: Upload Java artifacts
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: manifold_java_bindings_windows
+  #       path: bindings/java/target/*.jar
 
   build_mac:
     timeout-minutes: 30
     strategy:
       matrix:
-        parallelization: [OFF, ON]
-    runs-on: macos-latest
+        parallel_backend: [NONE, TBB]
+    runs-on: macos-14
+    if: github.event.pull_request.draft == false
     steps:
+    - name: Install Python 3.12
+      run: |
+        brew update
+        brew install python@3.12
+        curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - name: Configure Python 3.12 Environment
+      run: |
+        echo "PATH=$(brew --prefix python@3.12)/bin:/opt/homebrew/opt/python@3.12/libexec/bin:$PATH" >> $GITHUB_ENV
     - name: Install common dependencies
       run: |
-        brew install googletest assimp
-        pip install trimesh pytest
+        python3 -m venv .venv
+        brew install pkg-config assimp
+        # pip install trimesh
     - name: Install TBB
-      if: matrix.parallelization == 'ON'
+      if: matrix.parallel_backend == 'TBB'
       run: brew install tbb
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
+    - name: Install Java and Maven
+      run: |
+        brew install openjdk@17
+        export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
+        brew install --ignore-dependencies maven
+        echo "JAVA_HOME=$(/usr/libexec/java_home -v 17)" >> $GITHUB_ENV
+    - name: Check Java version
+      run: java -version
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 2
+    - uses: jwlawson/actions-setup-cmake@v1.12
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_PYBIND=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallelization}} .. && make
-    - name: Test
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_EXPORT=ON -DMANIFOLD_PAR=${{matrix.parallel_backend}} .. && make
+      shell: bash
+    - name: Find Libs
       run: |
-        cd build/test
-        ./manifold_test
-        cd ../../
-    - name: test cmake consumer
+        find . -name "*.dylib"
+      shell: bash
+    - name: Build Java package
+      shell: bash
       run: |
-        cd build
-        sudo cmake --install .
-        cd ..
-        ./scripts/test-cmake.sh
-        LDFLAGS=-Wl,-rpath,/usr/local/lib ./scripts/test-pkgconfig.sh
+        export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
+        cd bindings/java
+        JAVA_PACKAGE_VERSION=$(cat version.txt)
+        echo "JAVA_PACKAGE_VERSION=$JAVA_PACKAGE_VERSION" >> $GITHUB_ENV
+        mvn versions:set -DnewVersion=$JAVA_PACKAGE_VERSION --file pom.xml
+        mvn package -Dos.classifier=mac-${{matrix.parallel_backend}}-x86_64
+    # - name: Test
+    #   run: |
+    #     cd build/test
+    #     ./manifold_test
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: manifold_java_bindings_mac_${{matrix.parallel_backend}}_${{env.JAVA_PACKAGE_VERSION}}
+        path: bindings/java/target/*.jar
+    - name: Upload Surefire Reports
+      if: failure() # This step will run only if the previous steps failed
+      uses: actions/upload-artifact@v3
+      with:
+        name: surefire-reports
+        path: |
+          /Users/runner/work/manifold/manifold/bindings/java/target/surefire-reports
+          /Users/runner/work/manifold/manifold/bindings/java/target/*.dump
+          /Users/runner/work/manifold/manifold/bindings/java/target/*-jvmRun*.dump
+          /Users/runner/work/manifold/manifold/bindings/java/target/*.dumpstream
 
-  build_mac_builtin_tbb:
-    timeout-minutes: 30
-    runs-on: macos-latest
+  # build_nix:
+  #   timeout-minutes: 30
+  #   strategy:
+  #     matrix:
+  #       variant: [none, omp, tbb, none-cuda, omp-cuda, tbb-cuda]
+  #   runs-on: ubuntu-latest
+  #   if: github.event.pull_request.draft == false
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: cachix/install-nix-action@v15
+  #   - run: nix build -L '.?submodules=1#manifold-${{matrix.variant}}'
+
+  deploy_jars:
+    runs-on: ubuntu-22.04
+    needs: [build, build_mac]
+    if: github.event.pull_request.draft == false && ${{needs.build.outputs.java_package_version_changed}} == 'true'
     steps:
-    - name: Install common dependencies
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 2
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+    - name: Install Maven
       run: |
-        brew install googletest
-        pip install trimesh pytest
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
-    - name: Build
+        sudo apt-get update
+        sudo apt-get install -y maven
+    - name: Get version
+      id: get_version
+      run: echo "VERSION=$(cat bindings/java/version.txt)" >> $GITHUB_ENV
+      shell: bash
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: manifold_java_bindings_linux_NONE_OFF_${{env.VERSION}}
+        path: linux-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: manifold_java_bindings_mac_TBB_${{env.VERSION}}
+        path: mac-tbb-jar
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: manifold_java_bindings_linux_TBB_OFF_${{env.VERSION}}
+        path: linux-tbb-jar
+    - name: Deploy Jars
+      shell: bash
       run: |
-        mkdir build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DMANIFOLD_DEBUG=ON -DMANIFOLD_PYBIND=OFF -DMANIFOLD_PAR=ON .. && make
-    - name: Test
-      run: |
-        cd build/test
-        ./manifold_test
-        cd ../../
-    - name: test cmake consumer
-      run: |
-        cd build
-        sudo cmake --install .
-        cd ..
-        ./scripts/test-cmake.sh
-        LDFLAGS=-Wl,-rpath,/usr/local/lib ./scripts/test-pkgconfig.sh
+        VERSION=$(cat bindings/java/version.txt)
+        linux_jar_file=linux-jar/manifold3d-$VERSION-linux-x86_64.jar
+        linux_tbb_jar_file=linux-tbb-jar/manifold3d-$VERSION-linux-TBB-x86_64.jar
+        mac_tbb_jar_file=mac-tbb-jar/manifold3d-$VERSION-mac-TBB-x86_64.jar
 
-  build_mac_builtin_tbb_subdir:
-    timeout-minutes: 30
-    runs-on: macos-latest
-    steps:
-    - name: Install common dependencies
-      run: |
-        brew install googletest
-        pip install trimesh pytest
-    - uses: actions/checkout@v4
-    - uses: jwlawson/actions-setup-cmake@v2
-    - name: test cmake consumer
-      run: |
-        cd ..
-        ./manifold/scripts/test-cmake-subdir.sh
-
-  build_nix:
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        variant: [manifold-none, manifold-tbb, manifold-js, manifold-js-tbb, manifold3d]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: DeterminateSystems/nix-installer-action@main
-    - uses: DeterminateSystems/magic-nix-cache-action@main
-    - run: nix build -L '.?submodules=1#${{matrix.variant}}'
-
+        mvn versions:set -DnewVersion=$VERSION --file bindings/java/pom.xml
+        mvn deploy:deploy-file \
+          -DpomFile=bindings/java/pom.xml \
+          -DrepositoryId=clojars \
+          -Durl=https://clojars.org/repo \
+          -DgroupId=org.clojars.cartesiantheatrics \
+          -DartifactId=manifold3d \
+          -Dversion=$VERSION \
+          -Dpackaging=jar \
+          -Dfile=$linux_tbb_jar_file \
+          -Dclassifier=linux-TBB-x86_64 \
+          -Dfiles=$mac_tbb_jar_file,$linux_jar_file \
+          -Dclassifiers=mac-TBB-x86_64,linux-x86_64 \
+          -Dtypes=jar,jar \
+          --settings=bindings/java/settings.xml
+      env:
+        CLOJARS_PASSPHRASE: ${{ secrets.CLOJARS_PASSPHRASE }}
+        CLOJARS_TOKEN: ${{ secrets.CLOJARS_TOKEN }}

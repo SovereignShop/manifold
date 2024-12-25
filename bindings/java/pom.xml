@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.clojars.cartesiantheatrics</groupId>
+    <artifactId>manifold3d</artifactId>
+    <version>1.0.39</version>
+    <packaging>jar</packaging>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacpp</artifactId>
+            <version>1.5.9</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>clojars</id>
+            <name>Clojars repository</name>
+            <url>https://clojars.org/repo</url>
+        </repository>
+    </distributionManagement>
+    
+    <build>
+        <resources>
+            <resource>
+                <directory>../../build/bin</directory>
+            </resource>
+            <resource>
+                <directory>../../build/src/</directory>
+                <includes>
+                    <include>libmanifold.so</include>
+                    <include>libmanifold.3.0.0.dylib</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>../../build/src/manifold/Release</directory>
+                <includes>
+                    <include>manifold.dll</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+
+            <plugin>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>javacpp</artifactId>
+                <version>1.5.9</version>
+                <configuration>
+                    <classPath>${project.build.outputDirectory}</classPath>
+                    <libraryPath>${project.build.directory}/../../../build/src/</libraryPath>
+                    <includePaths>
+                        <includePath>${project.build.sourceDirectory}</includePath>
+                        <includePath>src/main/cpp/manifold3d/</includePath>
+                        <includePath>../../include/</includePath>
+                        <includePath>../../src/third_party/clipper2/CPP/Clipper2Lib/include/</includePath>
+                        <includePath>../../build/_deps/texttopolygon-src/include</includePath>
+                        <includePath>../../build/_deps/freetype2-src/include</includePath>
+                        <includePath>../../src/</includePath>
+                    </includePaths>
+                    <preload>libmanifold.so</preload>
+                    <copyLibs>false</copyLibs>
+
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>process-classes</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>${project.build.directory}/../../../build/src/manifold/</include>
+                            </includes>
+                            <compilerProperties>                                <java.library.path>../../build/src/manifold/</java.library.path>
+                            </compilerProperties>
+                            <classOrPackageNames>
+                                <classOrPackageName>manifold3d.*</classOrPackageName>
+                                <classOrPackageName>manifold3d.manifold.*</classOrPackageName>
+                                <classOrPackageName>manifold3d.pub.*</classOrPackageName>
+                                <classOrPackageName>manifold3d.linalg.*</classOrPackageName>
+                            </classOrPackageNames>
+
+
+                    <compilerProperties>                                <java.library.path>${project.build.directory}/../../../build/src/</java.library.path>
+
+                    </compilerProperties>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <classifier>${os.classifier}</classifier>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

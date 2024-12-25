@@ -16,10 +16,6 @@
 #include <functional>
 #include <memory>
 
-#ifdef MANIFOLD_EXPORT
-#include <iostream>
-#endif
-
 #include "manifold/common.h"
 #include "manifold/vec_view.h"
 
@@ -241,6 +237,7 @@ class Manifold {
    */
   ///@{
   Polygons Slice(double height = 0) const;
+  std::vector<Polygons> Slices(double bottomZ, double topZ, int nSlices) const;
   Polygons Project() const;
   static Manifold Extrude(const Polygons& crossSection, double height,
                           int nDivisions = 0, double twistDegrees = 0.0,
@@ -279,6 +276,12 @@ class Manifold {
   Box BoundingBox() const;
   int Genus() const;
   double GetTolerance() const;
+
+  std::vector<int> GetHalfedges() const;
+  std::vector<float> GetFaceNormals() const;
+  std::vector<int> GetTriangles() const;
+  std::vector<float> GetVertices() const;
+
   ///@}
 
   /** @name Measurement

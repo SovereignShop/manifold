@@ -978,6 +978,11 @@ Polygons Manifold::Slice(double height) const {
   return GetCsgLeafNode().GetImpl()->Slice(height);
 }
 
+std::vector<Polygons> Manifold::Slices(double bottomZ, double topZ, int nSlices) const {
+  return GetCsgLeafNode().GetImpl()->Slices(bottomZ, topZ, nSlices);
+
+}
+
 /**
  * Returns polygons representing the projected outline of this object
  * onto the X-Y plane. These polygons will often self-intersect, so it is
@@ -1001,6 +1006,63 @@ Manifold Manifold::Hull(const std::vector<vec3>& pts) {
   std::shared_ptr<Impl> impl = std::make_shared<Impl>();
   impl->Hull(Vec<vec3>(pts));
   return Manifold(std::make_shared<CsgLeafNode>(impl));
+}
+
+/**
+ * Get half edges.
+ **/
+std::vector<int> Manifold::GetHalfedges() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const manifold::Vec<Halfedge> halfedges = impl.halfedge_;
+  std::vector<int> ret;
+  ret.reserve(halfedges.size() * 3);
+  for (auto& halfedge: halfedges) {
+    ret.push_back(halfedge.startVert);
+    ret.push_back(halfedge.endVert);
+    ret.push_back(halfedge.pairedHalfedge);
+  }
+  return ret;
+}
+
+std::vector<float> Manifold::GetFaceNormals() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<vec3> faceNormals = impl.faceNormal_;
+  std::vector<float> ret;
+  ret.reserve(faceNormals.size() * 3);
+  for (auto& normal: faceNormals) {
+    ret.push_back(normal[0]);
+    ret.push_back(normal[1]);
+    ret.push_back(normal[2]);
+  }
+  return ret;
+}
+
+
+std::vector<float> Manifold::GetVertices() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<vec3> verts = impl.vertPos_;
+  std::vector<float> ret;
+  ret.reserve(verts.size() * 3);
+  for (auto& vert: verts) {
+    ret.push_back(vert[0]);
+    ret.push_back(vert[1]);
+    ret.push_back(vert[2]);
+  }
+  return ret;
+}
+
+std::vector<int> Manifold::GetTriangles() const {
+  const Impl& impl = *GetCsgLeafNode().GetImpl();
+  const Vec<ivec3> triVerts = impl.meshRelation_.triProperties;
+  std::vector<int> ret;
+  ret.reserve(triVerts.size() * 3);
+  for (auto& triVert: triVerts) {
+    ret.push_back(triVert[0]);
+    ret.push_back(triVert[1]);
+    ret.push_back(triVert[2]);
+  }
+  return ret;
+
 }
 
 /**

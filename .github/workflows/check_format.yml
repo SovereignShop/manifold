@@ -12,22 +12,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: DoozyX/clang-format-lint-action@v0.18
+    - uses: DoozyX/clang-format-lint-action@v0.14
       with:
         source: '.'
-        exclude: '*/third_party'
+        exclude: '*/third_party','*/java'
         extensions: 'h,cpp,js,ts,html'
-        clangFormatVersion: 18
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.12' 
-        cache: 'pip'
+        clangFormatVersion: 11
     - uses: psf/black@stable
       with:
         options: "--check --verbose"
         src: "./bindings/python/examples"
-    - name: "gersemi cmake check"
-      run: |
-        pip3 install gersemi
-        ./scripts/gersemi-check.sh
-

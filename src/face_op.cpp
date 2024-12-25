@@ -288,6 +288,79 @@ Polygons Manifold::Impl::Slice(double height) const {
   return polys;
 }
 
+std::vector<Polygons> Manifold::Impl::Slices(double bottomZ, double topZ, int nSlices) const {
+    std::vector<Polygons> sections(nSlices);
+    std::vector<float> sliceHeights(nSlices);
+    float step = (topZ - bottomZ) / (nSlices - 1);
+
+    for (int i = 0; i < nSlices; ++i) {
+        sliceHeights[i] = bottomZ + i * step;
+    }
+
+    std::unordered_map<int, std::unordered_set<int>> sliceToTriangles;
+
+    int numTriangles = halfedge_.size() / 3;
+
+    for (int tri = 0; tri < numTriangles; ++tri) {
+        float minZ = std::numeric_limits<float>::infinity();
+        float maxZ = -std::numeric_limits<float>::infinity();
+        for (const int j : {0, 1, 2}) {
+            const float z = vertPos_[halfedge_[3 * tri + j].startVert].z;
+            minZ = std::min(minZ, z);
+            maxZ = std::max(maxZ, z);
+        }
+
+        for (int s = 0; s < nSlices; ++s) {
+            if (minZ <= sliceHeights[s] && maxZ > sliceHeights[s]) {
+                sliceToTriangles[s].insert(tri);
+            }
+        }
+    }
+
+    for (int s = 0; s < nSlices; ++s) {
+        float height = sliceHeights[s];
+        std::unordered_set<int>& tris = sliceToTriangles[s];
+        Polygons polys;
+
+        while (!tris.empty()) {
+            const int startTri = *tris.begin();
+            SimplePolygon poly;
+
+            int k = 0;
+            for (const int j : {0, 1, 2}) {
+                if (vertPos_[halfedge_[3 * startTri + j].startVert].z > height &&
+                    vertPos_[halfedge_[3 * startTri + Next3(j)].startVert].z <= height) {
+                    k = Next3(j);
+                    break;
+                }
+            }
+
+            int tri = startTri;
+            do {
+                tris.erase(tris.find(tri));
+                if (vertPos_[halfedge_[3 * tri + k].endVert].z <= height) {
+                    k = Next3(k);
+                }
+
+                Halfedge up = halfedge_[3 * tri + k];
+                const vec3 below = vertPos_[up.startVert];
+                const vec3 above = vertPos_[up.endVert];
+                const float a = (height - below.z) / (above.z - below.z);
+                poly.push_back(vec2(la::lerp(below, above, a)));
+
+                const int pair = up.pairedHalfedge;
+                tri = pair / 3;
+                k = Next3(pair % 3);
+            } while (tri != startTri);
+
+            polys.push_back(poly);
+        }
+
+        sections[s] = polys;
+    }
+  return sections;
+}
+
 Polygons Manifold::Impl::Project() const {
   const mat2x3 projection = GetAxisAlignedProjection({0, 0, 1});
   Vec<Halfedge> cusps(NumEdge());

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings>
+  <servers>
+    <server>
+      <id>clojars</id>
+      <username>cartesiantheatrics</username>
+      <passphrase>${env.CLOJARS_PASSPHRASE}</passphrase>
+      <password>${env.CLOJARS_TOKEN}</password>
+    </server>
+  </servers>
+</settings>

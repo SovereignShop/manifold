@@ -304,6 +304,7 @@ struct Manifold::Impl {
                             VecView<Halfedge>::IterC end,
                             mat2x3 projection) const;
   Polygons Slice(double height) const;
+  std::vector<Polygons> Slices(double bottomZ, double topZ, int nSlices) const;
   Polygons Project() const;
 
   // edge_op.cpp
