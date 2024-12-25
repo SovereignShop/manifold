@@ -129,7 +129,7 @@ message(STATUS "Fetching TextToPolygon")
 FetchContent_Declare(
   TextToPolygon
   GIT_REPOSITORY https://github.com/SovereignShop/text-to-polygon.git
-  GIT_TAG 269c7f4072f76ba5330f5c46fa8ef10991099d3f
+  GIT_TAG 36ef56d2947673a61d73c561fcd6d48b62a24639
 )
 FetchContent_MakeAvailable(TextToPolygon)
 
