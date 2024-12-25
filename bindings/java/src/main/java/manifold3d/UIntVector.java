@@ -1,6 +1,7 @@
 package manifold3d;
 
 import java.nio.IntBuffer;
+import java.nio.LongBuffer;
 import manifold3d.BufferUtils;
 
 import org.bytedeco.javacpp.*;
@@ -14,14 +15,15 @@ public class UIntVector extends Pointer {
     public UIntVector(Pointer p) { super(p); }
     public UIntVector() { allocate(); }
 
-    // public static UIntVector FromArray(long[] longArray) {
-    //     UIntPointer longPtr = new UIntPointer(longArray);
-    //     return BufferUtils.longVectorFromPointer(longPtr, longArray.length);
-    // }
-    // public static UIntVector FromBuffer(LongBuffer longBuffer) {
-    //     UIntPointer longPtr = new UIntPointer(longBuffer);
-    //     return new UIntVector(longPtr);
-    // }
+    public static UIntVector FromArray(long[] longArray) {
+        LongPointer longPtr = new LongPointer(longArray);
+        return BufferUtils.uIntVectorFromPointer(longPtr, longArray.length);
+    }
+
+    public static UIntVector FromBuffer(LongBuffer longBuffer) {
+        LongPointer longPtr = new LongPointer(longBuffer);
+        return BufferUtils.uIntVectorFromPointer(longPtr, longBuffer.capacity());
+    }
 
     private native void allocate();
 
@@ -38,7 +40,6 @@ public class UIntVector extends Pointer {
     }
 
     public int[] toIntArray() {
-        // Allocate an array of the appropriate size
         int size = (int) size();
         int[] result = new int[size];
         IntPointer ptr = data();
@@ -47,7 +48,6 @@ public class UIntVector extends Pointer {
     }
 
     public long[] toLongArray() {
-        // Allocate an array of the appropriate size
         int[] signedIntArray = toIntArray();
         long[] result = new long[signedIntArray.length];
         for (int i = 0; i < signedIntArray.length; i++) {

@@ -23,7 +23,7 @@ public class FloatVector extends Pointer {
     }
     public static FloatVector FromBuffer(FloatBuffer floatBuffer) {
         FloatPointer floatPtr = new FloatPointer(floatBuffer);
-        return new FloatVector(floatPtr);
+        return BufferUtils.floatVectorFromPointer(floatPtr, floatBuffer.remaining());
     }
     private native void allocate();
     public native FloatPointer data();

@@ -10,6 +10,12 @@ using vec3   = linalg::vec<double, 3>;
 using vec4   = linalg::vec<double, 4>;
 using ivec3  = linalg::vec<int, 3>;
 using ivec4  = linalg::vec<int, 4>;
+using u_int32_t = unsigned int;
+
+std::vector<u_int32_t> uIntVectorFromPointer(long long int* data, size_t count) {
+    std::vector<u_int32_t> vec(data, data + count);
+    return vec;
+}
 
 std::vector<int> intVectorFromPointer(int* data, size_t count) {
     std::vector<int> vec(data, data + count);
