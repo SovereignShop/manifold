@@ -446,7 +446,6 @@ TEST(Manifold, Slice) {
   EXPECT_EQ(bottom.Area(), 1);
   EXPECT_EQ(top.Area(), 0);
 }
-#endif
 
 TEST(Manifold, Slices) {
   Manifold cube = Manifold::Tetrahedron().Scale({10, 10, 10});
@@ -462,19 +461,9 @@ TEST(Manifold, Slices) {
     auto& nSlice = sections[i+1];
     EXPECT_GT(slice.Area(), nSlice.Area());
   }
-}
 
-TEST(Manifold, Slices) {
-  Manifold cube = Manifold::Tetrahedron().Scale({10, 10, 10});
-  std::vector<CrossSection> slices = cube.Slices(1.0, 8.0, 8);
-  EXPECT_EQ(slices.size(), 8);
-  EXPECT_GT(slices[0].Area(), 0);
-  for (int i = 0; i < slices.size() - 1; i++) {
-    auto& slice = slices[i];
-    auto& nSlice = slices[i+1];
-    EXPECT_GT(slice.Area(), nSlice.Area());
-  }
 }
+#endif
 
 TEST(Manifold, MeshRelation) {
   MeshGL gyroidMeshGL = WithPositionColors(Gyroid()).AsOriginal().GetMeshGL();
