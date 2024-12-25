@@ -193,13 +193,13 @@ inline mat3x4 Translate(const mat3x4 &m, const vec3 &offset)
 {
     mat3x4 result = m;
 
-    if (offset.x != 0.0) {
+    if (offset[0] != 0.0) {
         result[3] = result[3] + m[0] * offset[0];
     }
-    if (offset.y != 0.0) {
+    if (offset[1] != 0.0) {
         result[3] = result[3] + m[1] * offset[1];
     }
-    if (offset.z != 0.0) {
+    if (offset[2] != 0.0) {
         result[3] = result[3] + m[2] * offset[2];
     }
 
@@ -211,10 +211,10 @@ inline mat2x3 Translate(const mat2x3 &m, const vec2 &offset)
 {
     mat2x3 result = m;
 
-    if (offset.x != 0.0) {
+    if (offset[0] != 0.0) {
         result[2] = result[2] + m[0] * offset[0];
     }
-    if (offset.y != 0.0) {
+    if (offset[1] != 0.0) {
         result[2] = result[2] + m[1] * offset[1];
     }
     return result;
@@ -355,7 +355,7 @@ inline mat3x4 CombineTransforms(const mat3x4 &a, const mat3x4 &b)
     // For each rotation column i in b, combine with a, then normalize.
     for (size_t i = 0; i < 3; ++i) {
         auto bi = b[i];
-        vec3 c = a0*bi.x + a1*bi.y + a2*bi.z;
+        vec3 c = a0*bi[0] + a1*bi[1] + a2*bi[2];
         c = linalg::normalize(c);
         r[i] = c;
     }

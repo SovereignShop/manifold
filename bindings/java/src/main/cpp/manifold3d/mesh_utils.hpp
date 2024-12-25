@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+#include <iostream>
 #include "manifold/linalg.h"
 #include "manifold/polygon.h"
 #include "manifold/manifold.h"
@@ -24,8 +25,9 @@ using mat3x3 = linalg::mat<double, 3, 3>;
 using mat4x3 = linalg::mat<double, 4, 3>;
 using mat3x4 = linalg::mat<double, 3, 4>;
 
-manifold::Manifold CreateManifold(const std::vector<vec3>& vertices, const std::vector<ivec3> triVerts) {
+manifold::Manifold CreateManifold(const std::vector<vec3>& vertices, const std::vector<ivec3>& triVerts) {
     manifold::MeshGL mesh;
+    mesh.numProp = 3;
     mesh.triVerts.reserve(3 * triVerts.size());
     for (auto& triVert: triVerts) {
         mesh.triVerts.push_back(triVert[0]);
@@ -39,7 +41,12 @@ manifold::Manifold CreateManifold(const std::vector<vec3>& vertices, const std::
         mesh.vertProperties.push_back(vert[2]);
     }
 
-    return manifold::Manifold(mesh);
+    auto man = manifold::Manifold(mesh);
+    manifold::Manifold::Error status = man.Status();
+    if (status != manifold::Manifold::Error::NoError) {
+        throw std::runtime_error("Generated manifold is invalid.");
+    }
+    return man;
 }
 
 manifold::Manifold CreateSurface(const float* vertProperties, int numProps, int width, int height, float pixelWidth = 1.0) {
@@ -511,6 +518,9 @@ manifold::Manifold EagerNearestNeighborLoft(const std::vector<manifold::Polygons
         const manifold::Polygons& botPolygons = sections[i];
         const manifold::Polygons& topPolygons = sections[i + 1];
         const mat3x4& botTransform = transforms[i];
+        const mat3x4& topTransform = transforms[i + 1];
+        std::cout << "Bot transform: " << botTransform[3][0] << " " << botTransform[3][1] << " " << botTransform[3][2] << std::endl;
+        std::cout << "Top transform: " << topTransform[3][0] << " " << topTransform[3][1] << " " << topTransform[3][2] << std::endl;
 
         if (botPolygons.size() != topPolygons.size()) {
           throw std::runtime_error("Cross sections must be composed of euqal number of polygons.");
