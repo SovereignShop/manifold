@@ -465,6 +465,13 @@ TEST(Manifold, Slices) {
 }
 #endif
 
+TEST(Manifold, GetTriangles) {
+  Manifold man = Manifold::Cube();
+  std::vector<int> triangles = man.GetTriangles();
+  EXPECT_EQ(man.NumTri(), 12);
+  EXPECT_EQ(triangles.size(), 12*3);
+}
+
 TEST(Manifold, MeshRelation) {
   MeshGL gyroidMeshGL = WithPositionColors(Gyroid()).AsOriginal().GetMeshGL();
   Manifold gyroid(gyroidMeshGL);
