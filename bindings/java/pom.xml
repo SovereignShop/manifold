@@ -70,7 +70,7 @@
                 <version>1.5.9</version>
                 <configuration>
                     <classPath>${project.build.outputDirectory}</classPath>
-                    <libraryPath>${project.build.directory}/../../../build/src/</libraryPath>
+                    <libraryPath>${project.build.directory}/../../build/src/</libraryPath>
                     <includePaths>
                         <includePath>${project.build.sourceDirectory}</includePath>
                         <includePath>src/main/cpp/manifold3d/</includePath>
@@ -82,7 +82,6 @@
                     </includePaths>
                     <preload>libmanifold.so</preload>
                     <copyLibs>false</copyLibs>
-
                 </configuration>
                 <executions>
                     <execution>
@@ -93,9 +92,9 @@
                         </goals>
                         <configuration>
                             <includes>
-                                <include>${project.build.directory}/../../../build/src/manifold/</include>
+                                <include>${project.build.directory}/../../build/src/</include>
                             </includes>
-                            <compilerProperties>                                <java.library.path>../../build/src/manifold/</java.library.path>
+                            <compilerProperties>                                <java.library.path>../../build/src/</java.library.path>
                             </compilerProperties>
                             <classOrPackageNames>
                                 <classOrPackageName>manifold3d.*</classOrPackageName>
@@ -105,7 +104,7 @@
                             </classOrPackageNames>
 
 
-                    <compilerProperties>                                <java.library.path>${project.build.directory}/../../../build/src/</java.library.path>
+                    <compilerProperties>                                <java.library.path>${project.build.directory}/../../build/src/</java.library.path>
 
                     </compilerProperties>
                         </configuration>

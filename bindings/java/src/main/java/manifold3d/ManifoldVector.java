@@ -7,14 +7,49 @@ import manifold3d.LibraryPaths;
 import java.util.ArrayList;
 import manifold3d.Manifold;
 
+import java.io.IOException;
+
 import java.util.Iterator;
 import java.lang.Iterable;
 import java.util.NoSuchElementException;
 
-@Platform(compiler = "cpp17", include = {"manifold/manifold.h", "<vector>"}, linkpath = { LibraryPaths.MANIFOLD_LIB_DIR }, link = { "manifold" })
+@Platform(compiler = "cpp17",
+          include = {"manifold/manifold.h", "<vector>"},
+          linkpath = { LibraryPaths.MANIFOLD_LIB_DIR },
+          link = { "manifold" })
 @Name("std::vector<manifold::Manifold>")
 public class ManifoldVector extends Pointer implements Iterable<Manifold>  {
-    static { Loader.load(); }
+    static {
+
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("linux")) {
+            try {
+                System.load(Loader.extractResource("/libmanifold.so", null, "libmanifold", ".so").getAbsolutePath());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (osName.contains("windows")) {
+            try {
+                System.out.println("Loading manifold");
+                System.load(Loader.extractResource("/manifold.dll", null, "manifold", ".dll").getAbsolutePath());
+                System.out.println("Finished Loading.");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (osName.contains("mac")) {
+            try {
+                System.out.println("Loading Manifold");
+                System.load(Loader.extractResource("/libmanifold.3.0.0.dylib", null, "libmanifold", ".dylib").getAbsolutePath());
+                System.out.println("Finished Loading.");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            throw new UnsupportedOperationException("Unsupported operating system: " + osName);
+        }
+
+        Loader.load();
+    }
 
     private int current = 0;
 
